@@ -1,0 +1,10 @@
+# Local env files (do not commit)
+Backend/.env
+.env
+
+# Node modules and build outputs
+**/node_modules/
+Frontend/dist/
+
+# VS Code settings
+.vscode/
