@@ -66,130 +66,109 @@ export default function AdminAudit({ onBack }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Header */}
-      <div className="bg-white shadow-md border-b">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="p-2 bg-gradient-to-r from-gray-600 to-gray-800 rounded-lg">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-              </svg>
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800">Audit Logs</h2>
-              <p className="text-sm text-gray-500">System activity tracking</p>
-            </div>
-          </div>
-          <button
-            onClick={onBack}
-            className="px-6 py-2 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-lg hover:from-gray-600 hover:to-gray-700 transition-all shadow-md hover:shadow-lg"
-          >
-            ← Back
-          </button>
-        </div>
-      </div>
+		<div className="p-2 sm:p-4 lg:p-6 bg-gray-100 min-h-screen">
+			<div>
+				<div className="bg-white rounded-lg shadow-lg overflow-hidden">
+					{/* Header */}
+					<div className="bg-gradient-to-r from-gray-600 to-gray-800 p-6 sm:p-8 text-white">
+						<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+							<div>
+								<h1 className="text-3xl sm:text-4xl font-black tracking-tight">🛡️ AUDIT LOGS</h1>
+								<p className="text-gray-300 text-sm mt-1">System activity tracking</p>
+							</div>
+							<button
+								onClick={onBack}
+								className="px-5 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-semibold transition text-sm sm:text-base"
+							>
+								← Back
+							</button>
+						</div>
+					</div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-blue-500">
-            <p className="text-gray-500 text-sm font-medium">Total Events</p>
-            <p className="text-3xl font-bold text-gray-800 mt-1">{filteredRows.length}</p>
-          </div>
-          <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-green-500">
-            <p className="text-gray-500 text-sm font-medium">Sales Events</p>
-            <p className="text-3xl font-bold text-gray-800 mt-1">
-              {filteredRows.filter(r => r.action?.includes('sale')).length}
-            </p>
-          </div>
-          <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-purple-500">
-            <p className="text-gray-500 text-sm font-medium">Purchase Events</p>
-            <p className="text-3xl font-bold text-gray-800 mt-1">
-              {filteredRows.filter(r => r.action?.includes('purchase')).length}
-            </p>
-          </div>
-          <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-orange-500">
-            <p className="text-gray-500 text-sm font-medium">Login Events</p>
-            <p className="text-3xl font-bold text-gray-800 mt-1">
-              {filteredRows.filter(r => r.action?.includes('login')).length}
-            </p>
-          </div>
-        </div>
+					{/* Search Bar */}
+					<div className="p-6 border-b border-gray-200">
+						<div className="relative">
+							<input
+								type="text"
+								placeholder="Search logs by action, user, or details..."
+								className="w-full px-5 py-3 pl-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+								value={filter}
+								onChange={(e) => setFilter(e.target.value)}
+							/>
+							<svg className="w-6 h-6 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+							</svg>
+						</div>
+					</div>
 
-        {/* Search Bar */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search logs by action, user, or details..."
-              className="w-full px-5 py-3 pl-12 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-            />
-            <svg className="w-6 h-6 text-gray-400 absolute left-4 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
-        </div>
+					{/* Stats Cards */}
+					<div className="p-6 bg-gray-50">
+						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+							<StatCard label="Total Events" value={filteredRows.length} />
+							<StatCard label="Sales Events" value={filteredRows.filter(r => r.action?.includes('sale')).length} />
+							<StatCard label="Purchase Events" value={filteredRows.filter(r => r.action?.includes('purchase')).length} />
+							<StatCard label="Login Events" value={filteredRows.filter(r => r.action?.includes('login')).length} />
+						</div>
+					</div>
 
-        {/* Logs Timeline */}
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-          {loading ? (
-            <div className="flex items-center justify-center py-20">
-              <div className="text-center">
-                <svg className="animate-spin h-12 w-12 text-gray-500 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <p className="text-gray-500">Loading audit logs...</p>
-              </div>
-            </div>
-          ) : filteredRows.length === 0 ? (
-            <div className="text-center py-20">
-              <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <p className="text-gray-500">No audit logs found</p>
-            </div>
-          ) : (
-            <div className="max-h-[600px] overflow-y-auto">
-              <div className="p-6 space-y-4">
-                {filteredRows.map((r, idx) => (
-                  <div key={r.id} className="flex items-start space-x-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition">
-                    {/* Timeline dot */}
-                    <div className="flex-shrink-0 mt-1">
-                      <div className={`p-2 rounded-lg ${getActionColor(r.action)}`}>
-                        {getActionIcon(r.action)}
-                      </div>
-                    </div>
+					{/* Table */}
+					<div className="overflow-x-auto">
+						{loading ? (
+							<div className="flex items-center justify-center py-20">
+								<p className="text-gray-500">Loading audit logs...</p>
+							</div>
+						) : filteredRows.length === 0 ? (
+							<div className="text-center py-20 px-6">
+								<p className="text-gray-500">No audit logs found matching your search.</p>
+							</div>
+						) : (
+							<table className="min-w-full divide-y divide-gray-200">
+								<thead className="bg-gray-100">
+									<tr>
+								<th className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">Action</th>
+								<th className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">User</th>
+								<th className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">Details</th>
+								<th className="px-6 py-4 text-right text-sm font-bold text-gray-700 uppercase tracking-wider">Timestamp</th>
+									</tr>
+								</thead>
+								<tbody className="bg-white divide-y divide-gray-200">
+									{filteredRows.map((r) => (
+										<tr key={r.id} className="hover:bg-gray-50">
+										<td className="px-6 py-5 whitespace-nowrap">
+											<span className={`px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full ${getActionColor(r.action)}`}>
+												{r.action}
+											</span>
+										</td>
+										<td className="px-6 py-5 whitespace-nowrap text-base font-semibold text-gray-900">
+											{r.username || r.user_id || "System"}
+										</td>
+										<td className="px-6 py-5">
+											{r.details && (
+												<pre className="text-sm text-gray-700 bg-gray-50 p-3 rounded overflow-x-auto whitespace-pre-wrap break-words max-w-lg">
+													{JSON.stringify(r.details, null, 2)}
+												</pre>
+											)}
+										</td>
+										<td className="px-6 py-5 whitespace-nowrap text-right text-base text-gray-600">
+												{new Date(r.created_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}
+											</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						)}
+					</div>
+				</div>
+			</div>
+		</div>
+	);
+}
 
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center space-x-3">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getActionColor(r.action)}`}>
-                            {r.action}
-                          </span>
-                          <span className="text-sm font-semibold text-gray-800">{r.username || r.user_id || "System"}</span>
-                        </div>
-                        <span className="text-xs text-gray-500">{new Date(r.created_at).toLocaleString()}</span>
-                      </div>
-                      {r.details && (
-                        <div className="mt-2 p-3 bg-white rounded-lg border border-gray-200">
-                          <pre className="text-xs text-gray-600 overflow-x-auto whitespace-pre-wrap break-words">
-                            {JSON.stringify(r.details, null, 2)}
-                          </pre>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+function StatCard({ label, value }) {
+	return (
+		<div className="bg-white rounded-lg shadow p-4">
+			<p className="text-sm font-medium text-gray-500">{label}</p>
+			<p className="text-2xl font-bold text-gray-800 mt-1">{value}</p>
+		</div>
+	);
 }

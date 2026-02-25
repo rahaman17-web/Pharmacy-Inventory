@@ -211,19 +211,19 @@ export default function Returns({ onBack }) {
   };
 
   return (
-    <div className="min-h-screen p-6 bg-gray-100">
-      <div className="max-w-6xl mx-auto">
-        <div className="bg-white rounded-lg shadow-xl overflow-hidden">
+    <div className="p-2 sm:p-4 lg:p-6 bg-gray-100 min-h-screen">
+      <div>
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r from-red-600 to-red-800 px-10 py-8 text-white">
-            <div className="flex justify-between items-start">
+          <div className="bg-gradient-to-r from-red-600 to-red-800 p-6 sm:p-8 text-white">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <h1 className="text-4xl font-black tracking-tight">🔄 SALES RETURNS</h1>
-                <p className="text-red-100 text-sm mt-2">Process customer returns and refunds</p>
+                <h1 className="text-3xl sm:text-4xl font-black tracking-tight">🔄 SALES RETURNS</h1>
+                <p className="text-red-100 text-sm mt-1">Process customer returns and refunds</p>
               </div>
               <button
                 onClick={onBack}
-                className="px-6 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-semibold transition"
+                className="px-5 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-semibold transition text-sm sm:text-base"
               >
                 ← Back
               </button>
@@ -231,28 +231,29 @@ export default function Returns({ onBack }) {
           </div>
 
           {/* Search Section */}
-          <div className="px-10 py-6 bg-gray-50 border-b-2 border-gray-200">
-            <div className="flex gap-4 items-start">
-              <div className="flex-1">
-                <label className="block text-sm font-bold text-gray-700 mb-2">
+          <div className="p-6 bg-gray-50 border-b border-gray-200">
+            <div className="flex flex-col sm:flex-row gap-4 items-start">
+              <div className="flex-1 w-full">
+                <label htmlFor="invoice-search" className="block text-sm font-bold text-gray-700 mb-1">
                   Invoice / Sale ID
                 </label>
                 <input
+                  id="invoice-search"
                   ref={saleIdRef}
                   type="text"
                   value={saleId}
                   onChange={(e) => setSaleId(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearchSale()}
                   placeholder="Enter invoice number..."
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 font-semibold text-lg"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-base"
                   disabled={loading}
                 />
               </div>
-              <div className="pt-7">
+              <div className="pt-0 sm:pt-7 w-full sm:w-auto">
                 <button
                   onClick={handleSearchSale}
                   disabled={loading}
-                  className="px-8 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto px-8 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? "Searching..." : "🔍 Search"}
                 </button>
@@ -260,12 +261,12 @@ export default function Returns({ onBack }) {
             </div>
 
             {error && (
-              <div className="mt-4 p-4 bg-red-50 border-l-4 border-red-600 text-red-800 rounded">
+              <div className="mt-4 p-4 bg-red-50 border-l-4 border-red-600 text-red-800 rounded-md">
                 <div className="flex items-center">
-                  <span className="text-2xl mr-3">⚠️</span>
+                  <span className="text-xl mr-3">⚠️</span>
                   <div>
                     <p className="font-bold">Error</p>
-                    <p>{error}</p>
+                    <p className="text-sm">{error}</p>
                   </div>
                 </div>
               </div>
@@ -274,13 +275,13 @@ export default function Returns({ onBack }) {
 
           {/* Sale Details */}
           {saleData && (
-            <div className="px-10 py-6">
+            <div className="p-6">
               {/* Sale Info */}
-              <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
-                <div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="sm:col-span-1">
                   <div className="text-xs text-gray-500 uppercase font-bold">Sale Date</div>
                   <div className="text-lg font-semibold text-gray-800">
-                    {new Date(saleData.sale.created_at).toLocaleDateString()}
+                    {new Date(saleData.sale.created_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}
                   </div>
                 </div>
                 <div>
@@ -303,28 +304,27 @@ export default function Returns({ onBack }) {
                 </div>
               </div>
               
-              {/* Discount Notice */}
               {Number(saleData.sale.discount || 0) > 0 && (
-                <div className="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-600 text-yellow-800 rounded">
-                  <div className="flex items-center">
-                    <span className="text-2xl mr-3">ℹ️</span>
+                <div className="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-500 text-yellow-800 rounded-md">
+                  <div className="flex items-start">
+                    <span className="text-xl mr-3">ℹ️</span>
                     <div>
                       <p className="font-bold">Discount Applied</p>
-                      <p>This sale had a discount of Rs. {Number(saleData.sale.discount || 0).toFixed(2)}. Refund will be calculated based on the discounted price paid by customer.</p>
+                      <p className="text-sm">This sale had a discount. Refunds are calculated based on the actual price paid by the customer.</p>
                     </div>
                   </div>
                 </div>
               )}
 
               {/* Items Table */}
-              <h2 className="text-lg font-bold text-gray-800 mb-4 uppercase tracking-wide">
+              <h2 className="text-base font-bold text-gray-800 mb-4 uppercase tracking-wider">
                 Select Items to Return
               </h2>
-              <div className="overflow-x-auto mb-6">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b-2 border-gray-800">
-                      <th className="text-center py-3 px-2 font-bold text-gray-800 text-sm w-16">
+              <div className="overflow-x-auto mb-6 border border-gray-200 rounded-lg">
+                <table className="w-full min-w-[1200px]">
+                  <thead className="bg-gray-50">
+                    <tr className="border-b-2 border-gray-300">
+                      <th className="text-center py-3 px-2 font-bold text-gray-600 text-xs uppercase w-16">
                         <input
                           type="checkbox"
                           checked={selectedItems.every((item) => item.selected)}
@@ -334,72 +334,67 @@ export default function Returns({ onBack }) {
                               selectedItems.map((item) => ({ ...item, selected: allSelected }))
                             );
                           }}
-                          className="w-5 h-5 cursor-pointer"
+                          className="w-5 h-5 text-red-600 border-gray-300 rounded focus:ring-red-500 cursor-pointer"
                         />
                       </th>
-                      <th className="text-left py-3 px-2 font-bold text-gray-800 text-sm">PRODUCT NAME</th>
-                      <th className="text-center py-3 px-2 font-bold text-gray-800 text-sm w-32">BATCH NO</th>
-                      <th className="text-center py-3 px-2 font-bold text-gray-800 text-sm w-32">SOLD</th>
-                      <th className="text-center py-3 px-2 font-bold text-gray-800 text-sm w-32">RETURNED</th>
-                      <th className="text-center py-3 px-2 font-bold text-gray-800 text-sm w-32">REMAIN</th>
-                      <th className="text-center py-3 px-2 font-bold text-gray-800 text-sm w-32">RETURN QTY</th>
-                      <th className="text-right py-3 px-2 font-bold text-gray-800 text-sm w-32">UNIT PRICE</th>
-                      <th className="text-center py-3 px-2 font-bold text-gray-800 text-sm w-28">DISCOUNT %</th>
-                      <th className="text-right py-3 px-2 font-bold text-gray-800 text-sm w-32">REFUND</th>
+                      <th className="text-left py-3 px-2 font-bold text-gray-600 text-xs uppercase">Product</th>
+                      <th className="text-center py-3 px-2 font-bold text-gray-600 text-xs uppercase w-28">Batch No</th>
+                      <th className="text-center py-3 px-2 font-bold text-gray-600 text-xs uppercase w-24">Sold</th>
+                      <th className="text-center py-3 px-2 font-bold text-gray-600 text-xs uppercase w-24">Returned</th>
+                      <th className="text-center py-3 px-2 font-bold text-gray-600 text-xs uppercase w-24">Remain</th>
+                      <th className="text-center py-3 px-2 font-bold text-gray-600 text-xs uppercase w-28">Return Qty</th>
+                      <th className="text-right py-3 px-2 font-bold text-gray-600 text-xs uppercase w-32">Unit Price</th>
+                      <th className="text-center py-3 px-2 font-bold text-gray-600 text-xs uppercase w-28">Disc %</th>
+                      <th className="text-right py-3 px-2 font-bold text-gray-600 text-xs uppercase w-32">Refund</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-gray-200">
                     {selectedItems.map((item, index) => (
                       <tr
                         key={index}
-                        className={`border-b border-gray-200 ${
+                        className={`${
                           item.selected ? "bg-red-50" : "bg-white"
-                        }`}
+                        } hover:bg-gray-50`}
                       >
-                        <td className="py-4 px-2 text-center">
+                        <td className="py-3 px-2 text-center">
                           <input
                             type="checkbox"
                             checked={item.selected}
                             onChange={() => handleToggleItem(index)}
-                            className="w-5 h-5 cursor-pointer"
+                            className="w-5 h-5 text-red-600 border-gray-300 rounded focus:ring-red-500 cursor-pointer"
                           />
                         </td>
-                        <td className="py-4 px-2 text-gray-800 font-semibold">
+                        <td className="py-3 px-2 text-gray-800 font-semibold text-sm">
                           {item.product_name}
                         </td>
-                        <td className="py-4 px-2 text-center text-gray-600">
+                        <td className="py-3 px-2 text-center text-gray-600 text-sm">
                           {item.batch_no || "N/A"}
                         </td>
-                        <td className="py-4 px-2 text-center text-gray-700 font-medium">
+                        <td className="py-3 px-2 text-center text-gray-700 font-medium text-sm">
                           {item.sold_qty}
                         </td>
-                        <td className="py-4 px-2 text-center text-gray-700 font-medium">
+                        <td className="py-3 px-2 text-center text-gray-700 font-medium text-sm">
                           {item.returned_qty}
                         </td>
-                        <td className="py-4 px-2 text-center text-gray-700 font-medium">
+                        <td className="py-3 px-2 text-center text-gray-700 font-medium text-sm">
                           {item.remaining_qty}
                         </td>
-                        <td className="py-4 px-2 text-center">
+                        <td className="py-3 px-2 text-center">
                           <input
                             type="number"
                             min="1"
                             max={item.remaining_qty}
                             value={item.return_qty}
                             onChange={(e) => handleQtyChange(index, e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                handleSubmitReturn();
-                              }
-                            }}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSubmitReturn()}
                             disabled={!item.selected}
-                            className="w-20 px-3 py-2 text-center border-2 border-red-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 font-semibold disabled:opacity-50 disabled:bg-gray-100"
+                            className="w-20 px-2 py-1 text-center border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 font-semibold disabled:opacity-50 disabled:bg-gray-100"
                           />
                         </td>
-                        <td className="py-4 px-2 text-right text-gray-800 font-medium">
+                        <td className="py-3 px-2 text-right text-gray-800 font-medium text-sm">
                           Rs. {item.original_unit_price.toFixed(2)}
                         </td>
-                        <td className="py-4 px-2 text-center">
+                        <td className="py-3 px-2 text-center">
                           <input
                             type="number"
                             min="0"
@@ -407,17 +402,12 @@ export default function Returns({ onBack }) {
                             step="0.01"
                             value={item.discount_percent}
                             onChange={(e) => handleDiscountChange(index, e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                handleSubmitReturn();
-                              }
-                            }}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSubmitReturn()}
                             disabled={!item.selected}
-                            className="w-20 px-2 py-2 text-center border-2 border-orange-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600 font-semibold disabled:opacity-50 disabled:bg-gray-100"
+                            className="w-20 px-2 py-1 text-center border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 font-semibold disabled:opacity-50 disabled:bg-gray-100"
                           />
                         </td>
-                        <td className="py-4 px-2 text-right text-gray-900 font-bold">
+                        <td className="py-3 px-2 text-right text-gray-900 font-bold text-sm">
                           {item.selected
                             ? `Rs. ${(item.return_qty * item.original_unit_price * (1 - Number(item.discount_percent || 0) / 100)).toFixed(2)}`
                             : "—"}
@@ -428,49 +418,33 @@ export default function Returns({ onBack }) {
                 </table>
               </div>
 
-                {/* Confirmation Modal for Returns */}
-                {showConfirmReturn && (
-                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+              {/* Confirmation Modal */}
+              {showConfirmReturn && (
+                  <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
                     onKeyDown={(e) => {
                       if (e.key === 'Escape') {
                         e.preventDefault();
                         setShowConfirmReturn(false);
                         setTimeout(() => saleIdRef.current?.focus(), 100);
-                      } else if (e.key === 'ArrowDown' || e.key === 'Tab') {
-                        e.preventDefault();
-                        const next = modalReturnFocus < 2 ? modalReturnFocus + 1 : 0;
-                        setModalReturnFocus(next);
-                        const refs = [modalReturnRef, modalClearRef, modalCancelRef];
-                        refs[next]?.current?.focus();
-                      } else if (e.key === 'ArrowUp') {
-                        e.preventDefault();
-                        const prev = modalReturnFocus > 0 ? modalReturnFocus - 1 : 2;
-                        setModalReturnFocus(prev);
-                        const refs = [modalReturnRef, modalClearRef, modalCancelRef];
-                        refs[prev]?.current?.focus();
                       }
                     }}
                   >
-                    <div className="bg-white rounded shadow-lg p-6 max-w-sm w-full mx-4">
+                    <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full">
                       <div className="text-center mb-4">
                         <h2 className="text-xl font-bold text-gray-800 mb-2">Process Return?</h2>
-                        <p className="text-gray-600 text-sm">Items: {confirmItems.length} — Refund: Rs. {Number(confirmRefundAmount || 0).toFixed(2)}</p>
+                        <p className="text-gray-600">Items: {confirmItems.length} — Refund: Rs. {Number(confirmRefundAmount || 0).toFixed(2)}</p>
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         <button
                           ref={modalReturnRef}
                           onClick={() => doProcessReturn()}
-                          onFocus={() => setModalReturnFocus(0)}
-                          onKeyDown={(e) => e.key === 'Enter' && doProcessReturn()}
-                          className={`w-full px-4 py-3 bg-green-600 text-white rounded hover:bg-green-700 font-semibold transition ${modalReturnFocus === 0 ? 'ring-4 ring-green-300' : ''}`}
+                          className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold transition focus:outline-none focus:ring-4 focus:ring-green-300"
                         >
-                          ✓ Proceed Return (Enter)
+                          ✓ Proceed Return
                         </button>
-
                         <button
                           ref={modalClearRef}
                           onClick={() => {
-                            // clear and start new
                             setShowConfirmReturn(false);
                             setSaleId("");
                             setSaleData(null);
@@ -479,19 +453,14 @@ export default function Returns({ onBack }) {
                             try { localStorage.removeItem(RETURNS_DRAFT_KEY); } catch (e) {}
                             setTimeout(() => saleIdRef.current?.focus(), 100);
                           }}
-                          onFocus={() => setModalReturnFocus(1)}
-                          onKeyDown={(e) => e.key === 'Enter' && (setShowConfirmReturn(false), setSaleId(""), setSaleData(null), setSelectedItems([]), setReason(""))}
-                          className={`w-full px-4 py-3 bg-yellow-600 text-white rounded hover:bg-yellow-700 font-semibold transition ${modalReturnFocus === 1 ? 'ring-4 ring-yellow-300' : ''}`}
+                          className="w-full px-4 py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 font-semibold transition focus:outline-none focus:ring-4 focus:ring-yellow-300"
                         >
                           Clear & Start New
                         </button>
-
                         <button
                           ref={modalCancelRef}
                           onClick={() => { setShowConfirmReturn(false); setTimeout(() => saleIdRef.current?.focus(), 100); }}
-                          onFocus={() => setModalReturnFocus(2)}
-                          onKeyDown={(e) => e.key === 'Enter' && (setShowConfirmReturn(false), setTimeout(() => saleIdRef.current?.focus(), 100))}
-                          className={`w-full px-4 py-3 bg-gray-600 text-white rounded hover:bg-gray-700 font-semibold transition ${modalReturnFocus === 2 ? 'ring-4 ring-gray-300' : ''}`}
+                          className="w-full px-4 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 font-semibold transition focus:outline-none focus:ring-4 focus:ring-gray-300"
                         >
                           ✕ Cancel
                         </button>
@@ -500,34 +469,33 @@ export default function Returns({ onBack }) {
                   </div>
                 )}
 
-              {/* Reason */}
-              <div className="mb-6">
-                <label className="block text-sm font-bold text-gray-700 mb-2">
-                  Return Reason (Optional)
-                </label>
-                <textarea
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  placeholder="e.g., Damaged product, Wrong item, Customer changed mind..."
-                  rows="3"
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600"
-                />
-              </div>
-
-              {/* Total Refund */}
-              <div className="flex justify-end mb-6">
-                <div className="w-96 bg-gradient-to-r from-green-600 to-green-700 px-6 py-5 text-white rounded-lg shadow-lg border-2 border-green-800">
+              {/* Reason & Total */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 items-start">
+                <div>
+                  <label htmlFor="return-reason" className="block text-sm font-bold text-gray-700 mb-1">
+                    Return Reason (Optional)
+                  </label>
+                  <textarea
+                    id="return-reason"
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    placeholder="e.g., Damaged product, Wrong item..."
+                    rows="4"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                  />
+                </div>
+                <div className="w-full bg-gradient-to-r from-green-600 to-green-700 p-5 text-white rounded-lg shadow-lg">
                   <div className="text-center mb-2">
-                    <div className="text-sm font-semibold uppercase tracking-wide">💰 Amount to Return to Customer</div>
+                    <div className="text-sm font-semibold uppercase tracking-wide">💰 Amount to Refund</div>
                   </div>
                   <div className="flex justify-center items-center">
-                    <span className="text-5xl font-black">Rs. {calculateTotal().toFixed(2)}</span>
+                    <span className="text-4xl sm:text-5xl font-black">Rs. {calculateTotal().toFixed(2)}</span>
                   </div>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-4">
+              <div className="flex flex-col sm:flex-row gap-4">
                 <button
                   onClick={handleSubmitReturn}
                   disabled={loading || selectedItems.filter((item) => item.selected).length === 0}

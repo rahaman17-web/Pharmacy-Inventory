@@ -21,6 +21,7 @@ function App() {
         }
 
         // Verify token is still valid by making a test API call
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         await api.get("/auth/verify");
         setUser(JSON.parse(storedUser));
       } catch (err) {
@@ -37,18 +38,19 @@ function App() {
     validateSession();
   }, []);
 
-  useEffect(() => {
-    // Don't wipe localStorage during initial boot.
-    // On refresh, we first validate existing token in validateSession().
-    if (loading) return;
+  const handleLogin = (loggedInUser, token) => {
+    localStorage.setItem("user", JSON.stringify(loggedInUser));
+    localStorage.setItem("token", token);
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    setUser(loggedInUser);
+  };
 
-    if (user) {
-      localStorage.setItem("user", JSON.stringify(user));
-    } else {
-      localStorage.removeItem("user");
-      localStorage.removeItem("token");
-    }
-  }, [user, loading]);
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    delete api.defaults.headers.common['Authorization'];
+    setUser(null);
+  };
 
   if (loading) {
     return (
@@ -62,16 +64,16 @@ function App() {
   }
 
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <div className="min-h-screen">
         <Routes>
           <Route 
             path="/login" 
-            element={!user ? <Login onLogin={setUser} /> : <Navigate to="/" replace />} 
+            element={!user ? <Login onLogin={handleLogin} /> : <Navigate to="/" replace />} 
           />
           <Route 
             path="/*" 
-            element={user ? <Dashboard user={user} onLogout={() => setUser(null)} /> : <Navigate to="/login" replace />} 
+            element={user ? <Dashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
           />
         </Routes>
       </div>

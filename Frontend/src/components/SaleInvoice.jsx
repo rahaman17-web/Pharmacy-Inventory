@@ -350,21 +350,21 @@ export default function SaleInvoice({ onBack }) {
   };
 
   return (
-    <div className="min-h-screen p-4 bg-gray-50">
-      <div className="max-w-6xl mx-auto">
-        {/* Simple Invoice Form */}
-        <div className="bg-white rounded shadow-md overflow-hidden border border-gray-300">
-          {/* Simple Header */}
-          <div className="bg-gray-800 px-6 py-4 text-white">
-            <div className="flex justify-between items-center">
+    <div className="p-2 sm:p-4 lg:p-6 bg-gray-50 dark:bg-gray-900/90 flex-1 overflow-y-auto">
+      <div>
+        {/* Invoice Form */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden border border-gray-200 dark:border-gray-700">
+          {/* Header */}
+          <div className="bg-gray-800 dark:bg-gray-900 px-4 sm:px-6 py-4 text-white">
+            <div className="flex justify-between items-start sm:items-center flex-col sm:flex-row gap-4">
               <div>
-                <h1 className="text-2xl font-bold">Zam Zam Pharmacy</h1>
-                <p className="text-sm text-gray-300 mt-1">Near Bacha Khan Medical Complex Shamansoor</p>
+                <h1 className="text-xl sm:text-2xl font-bold">Zam Zam Pharmacy</h1>
+                <p className="text-xs sm:text-sm text-gray-300 mt-1">Near Bacha Khan Medical Complex Shamansoor</p>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 w-full sm:w-auto justify-between">
                 <div className="text-right">
                   <div className="text-xs text-gray-400 uppercase">Invoice</div>
-                  <div className="text-xl font-bold">#{invoiceNo || "-"}</div>
+                  <div className="text-lg sm:text-xl font-bold">#{invoiceNo || "-"}</div>
                   <div className="text-xs text-gray-400 mt-1">{new Date().toLocaleDateString()}</div>
                 </div>
                 <button
@@ -373,15 +373,10 @@ export default function SaleInvoice({ onBack }) {
                   onFocus={() => setFocusedButton(2)}
                   onBlur={() => setFocusedButton(null)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      onBack();
-                    } else if (e.key === 'ArrowDown') {
-                      e.preventDefault();
-                      completeSaleRef.current?.focus();
-                    }
+                    if (e.key === 'Enter') { e.preventDefault(); onBack(); }
+                    else if (e.key === 'ArrowDown') { e.preventDefault(); completeSaleRef.current?.focus(); }
                   }}
-                  className={`px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded font-semibold transition ${focusedButton === 2 ? 'ring-4 ring-gray-400' : ''}`}
+                  className={`px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded font-semibold transition whitespace-nowrap ${focusedButton === 2 ? 'ring-2 ring-offset-2 ring-offset-gray-800 ring-blue-400' : ''}`}
                 >
                   ← Back
                 </button>
@@ -390,175 +385,155 @@ export default function SaleInvoice({ onBack }) {
           </div>
 
           {/* Items Table */}
-          <div className="p-6">
-            <div className="mb-6">
-              <div className="overflow-x-auto border-2 border-gray-300">
-                <table className="w-full" style={{ borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="border border-gray-300 text-left py-2 px-3 font-semibold text-gray-700 text-sm">#</th>
-                      <th className="border border-gray-300 text-left py-2 px-3 font-semibold text-gray-700 text-sm">Item Description</th>
-                      <th className="border border-gray-300 text-center py-2 px-3 font-semibold text-gray-700 text-sm">Pack Size</th>
-                      <th className="border border-gray-300 text-center py-2 px-3 font-semibold text-gray-700 text-sm">Stock</th>
-                      <th className="border border-gray-300 text-center py-2 px-3 font-semibold text-gray-700 text-sm">Qty</th>
-                      <th className="border border-gray-300 text-right py-2 px-3 font-semibold text-gray-700 text-sm">Unit Price (Rs)</th>
-                      <th className="border border-gray-300 text-right py-2 px-3 font-semibold text-gray-700 text-sm">Total (Rs)</th>
-                      <th className="border border-gray-300 text-center py-2 px-3 font-semibold text-gray-700 text-sm">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((row, i) => (
-                      <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                        <td className="border border-gray-300 py-2 px-3 text-gray-700">{i + 1}</td>
-                        <td className="border border-gray-300 py-2 px-3">
-                          <AutoComplete
-                            value={{ id: row.product_id, name: row.item }}
-                            ref={(el) => (itemRefs.current[i] = el)}
-                            onSelect={(val) => updateItem(i, "product", val)}
-                            onEnter={() => qtyRefs.current[i]?.focus()}
-                            allItems={availableMedicines}
-                            allowCreate={false}
-                            fullScreenList
-                            placeholder="Search item..."
-                          />
-                        </td>
-                        <td className="border border-gray-300 py-2 px-3 text-center text-gray-600">{row.pack_size}</td>
-                        <td className="border border-gray-300 py-2 px-3 text-center">
-                          {row.product_id ? (
-                            <span className={`font-semibold ${row.available_stock === 0 ? 'text-red-600' : row.available_stock < 10 ? 'text-orange-600' : 'text-green-600'}`}>
-                              {row.available_stock}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400">—</span>
-                          )}
-                        </td>
-                        <td className="border border-gray-300 py-2 px-3 text-center">
-                          <input
-                            ref={(el) => (qtyRefs.current[i] = el)}
-                            type="number"
-                            min={1}
-                            className="w-20 px-2 py-1 text-center border border-gray-400 rounded focus:outline-none focus:border-gray-600"
-                            value={row.qty}
-                            onChange={(e) => updateItem(i, "qty", e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                // Only move/add row if both item and qty are filled
-                                if (row.product_id && row.qty > 0) {
-                                  if (i + 1 < items.length) {
-                                    itemRefs.current[i + 1]?.focus();
-                                  } else {
-                                    addRow();
-                                    setTimeout(() => itemRefs.current[items.length]?.focus(), 50);
-                                  }
+          <div className="p-4 sm:p-6">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[800px]">
+                <thead className="bg-gray-50 dark:bg-gray-700">
+                  <tr>
+                    <th className="py-2 px-3 text-left font-semibold text-gray-600 dark:text-gray-300 text-sm w-12">#</th>
+                    <th className="py-2 px-3 text-left font-semibold text-gray-600 dark:text-gray-300 text-sm">Item Description</th>
+                    <th className="py-2 px-3 text-center font-semibold text-gray-600 dark:text-gray-300 text-sm w-24">Pack Size</th>
+                    <th className="py-2 px-3 text-center font-semibold text-gray-600 dark:text-gray-300 text-sm w-24">Stock</th>
+                    <th className="py-2 px-3 text-center font-semibold text-gray-600 dark:text-gray-300 text-sm w-24">Qty</th>
+                    <th className="py-2 px-3 text-right font-semibold text-gray-600 dark:text-gray-300 text-sm w-32">Unit Price (Rs)</th>
+                    <th className="py-2 px-3 text-right font-semibold text-gray-600 dark:text-gray-300 text-sm w-32">Total (Rs)</th>
+                    <th className="py-2 px-3 text-center font-semibold text-gray-600 dark:text-gray-300 text-sm w-20">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((row, i) => (
+                    <tr key={i} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                      <td className="py-2 px-3 text-gray-700 dark:text-gray-300">{i + 1}</td>
+                      <td className="py-2 px-3">
+                        <AutoComplete
+                          value={{ id: row.product_id, name: row.item }}
+                          ref={(el) => (itemRefs.current[i] = el)}
+                          onSelect={(val) => updateItem(i, "product", val)}
+                          onEnter={() => qtyRefs.current[i]?.focus()}
+                          allItems={availableMedicines}
+                          allowCreate={false}
+                          fullScreenList
+                          placeholder="Search item..."
+                        />
+                      </td>
+                      <td className="py-2 px-3 text-center text-gray-600 dark:text-gray-400">{row.pack_size}</td>
+                      <td className="py-2 px-3 text-center">
+                        {row.product_id ? (
+                          <span className={`font-semibold ${row.available_stock === 0 ? 'text-red-500' : row.available_stock < 10 ? 'text-orange-500' : 'text-green-500'}`}>
+                            {row.available_stock}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 dark:text-gray-500">—</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-3 text-center">
+                        <input
+                          ref={(el) => (qtyRefs.current[i] = el)}
+                          type="number"
+                          min={1}
+                          className="w-20 px-2 py-1 text-center bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={row.qty}
+                          onChange={(e) => updateItem(i, "qty", e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              if (row.product_id && row.qty > 0) {
+                                if (i + 1 < items.length) {
+                                  itemRefs.current[i + 1]?.focus();
+                                } else {
+                                  addRow();
+                                  setTimeout(() => itemRefs.current[items.length]?.focus(), 50);
                                 }
                               }
-                            }}
-                            placeholder="0"
-                          />
-                        </td>
-                        <td className="border border-gray-300 py-2 px-3 text-right text-gray-700">{Number(row.price).toFixed(2)}</td>
-                        <td className="border border-gray-300 py-2 px-3 text-right text-gray-900 font-semibold">
-                          {row.product_id && Number(row.qty) > 0 ? (Number(row.qty) * Number(row.price)).toFixed(2) : '—'}
-                        </td>
-                        <td className="border border-gray-300 py-2 px-3 text-center">
-                          {items.length > 1 && (
-                            <button
-                              onClick={() => removeRow(i)}
-                              className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
-                              title="Remove item"
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Summary Section */}
-            <div className="border-2 border-gray-300 mt-4">
-              <table className="w-full" style={{ borderCollapse: 'collapse' }}>
-                <tbody>
-                  {/* Subtotal */}
-                  <tr className="bg-gray-50">
-                    <td className="border border-gray-300 py-2 px-4 text-left font-semibold text-gray-700">Subtotal</td>
-                    <td className="border border-gray-300 py-2 px-4 text-right font-semibold text-gray-900">Rs. {totalAmount.toFixed(2)}</td>
-                  </tr>
-
-                  {/* Discount */}
-                  <tr className="bg-white">
-                    <td className="border border-gray-300 py-2 px-4 text-left">
-                      <div className="flex items-center gap-2">
-                        <label className="font-semibold text-gray-700">Discount (%)</label>
-                        <span className="text-xs bg-blue-100 text-white-1000 px-2 py-0.5 rounded font-mono">F3</span>
-                        <input
-                          ref={discountRef}
-                          type="number"
-                          min={0}
-                          max={capPercent}
-                          step="0.1"
-                          value={discount}
-                          onChange={(e) => {
-                            const raw = e.target.value;
-                            if (raw === '') {
-                              setDiscount('');
-                              return;
                             }
-                            const num = Number(raw);
-                            if (Number.isNaN(num)) return;
-                            if (num > capPercent) {
-                              alert(`Maximum allowed discount is ${capPercent}%. It has been set to ${capPercent}%.`);
-                              setDiscount(String(capPercent));
-                              return;
-                            }
-                            if (num < 0) {
-                              setDiscount('0');
-                              return;
-                            }
-                            setDiscount(String(num));
                           }}
-                          className="w-20 px-2 py-1 border border-gray-400 rounded text-center focus:outline-none"
+                          placeholder="0"
                         />
-                        
-                      </div>
-                    </td>
-                    <td className="border border-gray-300 py-2 px-4 text-right font-semibold text-red-600">- Rs. {discountAmount.toFixed(2)}</td>
-                  </tr>
-
-                  {/* Net Total */}
-                  <tr className="bg-gray-800 text-white">
-                    <td className="border border-gray-300 py-3 px-4 text-left font-bold text-lg">NET TOTAL</td>
-                    <td className="border border-gray-300 py-3 px-4 text-right font-bold text-2xl">Rs. {netTotal.toFixed(2)}</td>
-                  </tr>
+                      </td>
+                      <td className="py-2 px-3 text-right text-gray-700 dark:text-gray-300">{Number(row.price).toFixed(2)}</td>
+                      <td className="py-2 px-3 text-right text-gray-900 dark:text-white font-semibold">
+                        {row.product_id && Number(row.qty) > 0 ? (Number(row.qty) * Number(row.price)).toFixed(2) : '—'}
+                      </td>
+                      <td className="py-2 px-3 text-center">
+                        {items.length > 1 && (
+                          <button
+                            onClick={() => removeRow(i)}
+                            className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+                            title="Remove item"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           </div>
 
+          {/* Summary Section */}
+          <div className="grid grid-cols-1 md:grid-cols-2">
+            <div className="p-6 order-2 md:order-1">
+              {/* This space can be used for notes or other info in the future */}
+            </div>
+            <div className="p-6 order-1 md:order-2">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-gray-700 dark:text-gray-300">Subtotal</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">Rs. {totalAmount.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <label className="font-semibold text-gray-700 dark:text-gray-300">Discount (%)</label>
+                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-mono">F3</span>
+                    <input
+                      ref={discountRef}
+                      type="number"
+                      min={0}
+                      max={capPercent}
+                      step="0.1"
+                      value={discount}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        if (raw === '') { setDiscount(''); return; }
+                        const num = Number(raw);
+                        if (Number.isNaN(num)) return;
+                        if (num > capPercent) {
+                          alert(`Maximum allowed discount is ${capPercent}%. It has been set to ${capPercent}%.`);
+                          setDiscount(String(capPercent));
+                          return;
+                        }
+                        if (num < 0) { setDiscount('0'); return; }
+                        setDiscount(String(num));
+                      }}
+                      className="w-20 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-center bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <span className="font-semibold text-red-600">- Rs. {discountAmount.toFixed(2)}</span>
+                </div>
+                <div className="border-t border-gray-200 dark:border-gray-700 my-2"></div>
+                <div className="flex justify-between items-center bg-gray-800 dark:bg-gray-900 text-white -m-3 p-3 rounded-b-lg md:rounded-lg">
+                  <span className="font-bold text-lg">NET TOTAL</span>
+                  <span className="font-bold text-2xl">Rs. {netTotal.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Action Buttons */}
-          <div className="flex gap-3 px-6 py-4 bg-gray-50 border-t border-gray-300">
+          <div className="flex gap-3 px-6 py-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700">
             <button
               ref={completeSaleRef}
               onClick={handleSubmit}
               onFocus={() => setFocusedButton(0)}
               onBlur={() => setFocusedButton(null)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleSubmit();
-                } else if (e.key === 'ArrowRight') {
-                  e.preventDefault();
-                  clearFormRef.current?.focus();
-                } else if (e.key === 'ArrowUp') {
-                  e.preventDefault();
-                  backRef.current?.focus();
-                }
+                if (e.key === 'Enter') { e.preventDefault(); handleSubmit(); }
+                else if (e.key === 'ArrowRight') { e.preventDefault(); clearFormRef.current?.focus(); }
+                else if (e.key === 'ArrowUp') { e.preventDefault(); backRef.current?.focus(); }
               }}
-              className={`px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-semibold transition ${focusedButton === 0 ? 'ring-4 ring-green-300' : ''}`}
+              className={`px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-semibold transition ${focusedButton === 0 ? 'ring-2 ring-offset-2 ring-green-400' : ''}`}
             >
               ✓ Complete Sale <span className="text-xs opacity-80">(F4)</span>
             </button>
@@ -567,9 +542,7 @@ export default function SaleInvoice({ onBack }) {
               onClick={() => {
                 setItems([{ product_id: null, item: "", qty: 1, price: 0, pack_price: 0, pack_size: 1, available_stock: 0 }]);
                 setDiscount("");
-                try {
-                  localStorage.removeItem(SALE_DRAFT_KEY);
-                } catch (e) {}
+                try { localStorage.removeItem(SALE_DRAFT_KEY); } catch (e) {}
               }}
               onFocus={() => setFocusedButton(1)}
               onBlur={() => setFocusedButton(null)}
@@ -578,19 +551,12 @@ export default function SaleInvoice({ onBack }) {
                   e.preventDefault();
                   setItems([{ product_id: null, item: "", qty: 1, price: 0, pack_price: 0, pack_size: 1, available_stock: 0 }]);
                   setDiscount("");
-                  try {
-                    localStorage.removeItem(SALE_DRAFT_KEY);
-                  } catch (e) {}
+                  try { localStorage.removeItem(SALE_DRAFT_KEY); } catch (e) {}
                   itemRefs.current[0]?.focus();
-                } else if (e.key === 'ArrowLeft') {
-                  e.preventDefault();
-                  completeSaleRef.current?.focus();
-                } else if (e.key === 'ArrowUp') {
-                  e.preventDefault();
-                  backRef.current?.focus();
-                }
+                } else if (e.key === 'ArrowLeft') { e.preventDefault(); completeSaleRef.current?.focus(); }
+                else if (e.key === 'ArrowUp') { e.preventDefault(); backRef.current?.focus(); }
               }}
-              className={`px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-semibold transition ${focusedButton === 1 ? 'ring-4 ring-red-300' : ''}`}
+              className={`px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-semibold transition ${focusedButton === 1 ? 'ring-2 ring-offset-2 ring-red-400' : ''}`}
             >
               Clear Form <span className="text-xs opacity-80">(F6)</span>
             </button>
@@ -600,14 +566,12 @@ export default function SaleInvoice({ onBack }) {
 
       {/* Confirmation Modal */}
       {showConfirmation && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50"
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
               e.preventDefault();
               setShowConfirmation(false);
-              const lastFilledIndex = items.findIndex(item => item.product_id) >= 0 
-                ? items.map((item, idx) => item.product_id ? idx : -1).filter(idx => idx >= 0).pop()
-                : 0;
+              const lastFilledIndex = items.findIndex(item => item.product_id) >= 0 ? items.map((item, idx) => item.product_id ? idx : -1).filter(idx => idx >= 0).pop() : 0;
               setTimeout(() => itemRefs.current[lastFilledIndex !== undefined ? lastFilledIndex : 0]?.focus(), 100);
             } else if (e.key === 'ArrowDown' || e.key === 'Tab') {
               e.preventDefault();
@@ -624,13 +588,13 @@ export default function SaleInvoice({ onBack }) {
             }
           }}
         >
-          <div className="bg-white rounded shadow-lg p-6 max-w-sm w-full mx-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-sm w-full mx-4">
             <div className="text-center mb-4">
-              <h2 className="text-xl font-bold text-gray-800 mb-2">Save Invoice?</h2>
-              <p className="text-gray-600 text-sm">Choose how you want to proceed (↑↓ Tab Enter Esc)</p>
+              <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Save Invoice?</h2>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">Choose how you want to proceed (↑↓ Tab Enter Esc)</p>
             </div>
             
-            <div className="space-y-2">
+            <div className="space-y-3">
               <button
                 ref={modalSaveRef}
                 type="button"
@@ -638,9 +602,9 @@ export default function SaleInvoice({ onBack }) {
                 onFocus={() => setModalFocus(0)}
                 onKeyDown={(e) => e.key === 'Enter' && saveSale(false)}
                 disabled={isSaving}
-                className={`w-full px-4 py-3 bg-green-600 text-white rounded hover:bg-green-700 font-semibold transition ${modalFocus === 0 ? 'ring-4 ring-green-300' : ''}`}
+                className={`w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold transition ${modalFocus === 0 ? 'ring-2 ring-offset-2 ring-offset-gray-800 ring-green-400' : ''}`}
               >
-                ✓ Save Only
+                {isSaving ? 'Saving...' : '✓ Save Only'}
               </button>
               
               <button
@@ -650,9 +614,9 @@ export default function SaleInvoice({ onBack }) {
                 onFocus={() => setModalFocus(1)}
                 onKeyDown={(e) => e.key === 'Enter' && saveSale(true)}
                 disabled={isSaving}
-                className={`w-full px-4 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold transition ${modalFocus === 1 ? 'ring-4 ring-blue-300' : ''}`}
+                className={`w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition ${modalFocus === 1 ? 'ring-2 ring-offset-2 ring-offset-gray-800 ring-blue-400' : ''}`}
               >
-                🖨️ Print Invoice
+                {isSaving ? 'Saving...' : '🖨️ Print Invoice'}
               </button>
               
               <button
@@ -660,10 +624,7 @@ export default function SaleInvoice({ onBack }) {
                 type="button"
                 onClick={() => {
                   setShowConfirmation(false);
-                  // Focus on the last filled item
-                  const lastFilledIndex = items.findIndex(item => item.product_id) >= 0 
-                    ? items.map((item, idx) => item.product_id ? idx : -1).filter(idx => idx >= 0).pop()
-                    : 0;
+                  const lastFilledIndex = items.findIndex(item => item.product_id) >= 0 ? items.map((item, idx) => item.product_id ? idx : -1).filter(idx => idx >= 0).pop() : 0;
                   setTimeout(() => itemRefs.current[lastFilledIndex !== undefined ? lastFilledIndex : 0]?.focus(), 100);
                 }}
                 onFocus={() => setModalFocus(2)}
@@ -671,14 +632,12 @@ export default function SaleInvoice({ onBack }) {
                   if (e.key === 'Enter') {
                     e.preventDefault();
                     setShowConfirmation(false);
-                    const lastFilledIndex = items.findIndex(item => item.product_id) >= 0 
-                      ? items.map((item, idx) => item.product_id ? idx : -1).filter(idx => idx >= 0).pop()
-                      : 0;
+                    const lastFilledIndex = items.findIndex(item => item.product_id) >= 0 ? items.map((item, idx) => item.product_id ? idx : -1).filter(idx => idx >= 0).pop() : 0;
                     setTimeout(() => itemRefs.current[lastFilledIndex !== undefined ? lastFilledIndex : 0]?.focus(), 100);
                   }
                 }}
                 disabled={isSaving}
-                className={`w-full px-4 py-3 bg-gray-600 text-white rounded hover:bg-gray-700 font-semibold transition ${modalFocus === 2 ? 'ring-4 ring-gray-300' : ''}`}
+                className={`w-full px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold transition ${modalFocus === 2 ? 'ring-2 ring-offset-2 ring-offset-gray-800 ring-gray-400' : ''}`}
               >
                 ✕ Cancel
               </button>

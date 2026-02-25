@@ -60,110 +60,113 @@ export default function Expenses({ onBack }) {
 	}, [rows]);
 
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50">
-			<div className="bg-white shadow-md border-b">
-				<div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-					<div>
-						<h2 className="text-2xl font-bold text-gray-800">Expenses</h2>
-						<p className="text-sm text-gray-500">Track operational costs for accurate net profit</p>
-					</div>
-					<button
-						onClick={onBack}
-						className="px-6 py-2 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-lg hover:from-gray-600 hover:to-gray-700 transition-all shadow-md hover:shadow-lg"
-					>
-						← Back
-					</button>
-				</div>
-			</div>
-
-			<div className="max-w-7xl mx-auto px-6 py-8">
-				<div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-					<div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-						<div>
-							<label className="block text-sm font-semibold text-gray-700 mb-2">From</label>
-							<input
-								type="date"
-								value={from}
-								onChange={(e) => setFrom(e.target.value)}
-								className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500"
-							/>
-						</div>
-						<div>
-							<label className="block text-sm font-semibold text-gray-700 mb-2">To</label>
-							<input
-								type="date"
-								value={to}
-								onChange={(e) => setTo(e.target.value)}
-								className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500"
-							/>
-						</div>
-						<button
-							onClick={load}
-							className="px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl font-semibold hover:from-orange-600 hover:to-amber-600 transition-all shadow-md"
-							disabled={loading}
-						>
-							{loading ? "Loading..." : "Load"}
-						</button>
-						<div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
-							<p className="text-xs text-gray-600">Total Expenses</p>
-							<p className="text-xl font-bold text-gray-900">Rs. {total.toFixed(2)}</p>
+		<div className="p-2 sm:p-4 lg:p-6 bg-gray-100 min-h-screen">
+			<div>
+				<div className="bg-white rounded-lg shadow-lg overflow-hidden">
+					{/* Header */}
+					<div className="bg-gradient-to-r from-orange-500 to-amber-500 p-6 sm:p-8 text-white">
+						<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+							<div>
+								<h1 className="text-3xl sm:text-4xl font-black tracking-tight">💸 EXPENSES</h1>
+								<p className="text-orange-100 text-sm mt-1">Track operational costs for accurate net profit</p>
+							</div>
+							<button
+								onClick={onBack}
+								className="px-5 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-semibold transition text-sm sm:text-base"
+							>
+								← Back
+							</button>
 						</div>
 					</div>
-				</div>
 
-				<div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-					<h3 className="text-lg font-bold text-gray-800 mb-4">Add Expense</h3>
-					<div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-						<div>
-							<label className="block text-sm font-semibold text-gray-700 mb-2">Amount</label>
-							<input
-								type="number"
-								value={amount}
-								onChange={(e) => setAmount(e.target.value)}
-								className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500"
-								placeholder="0"
-								min="0"
-								step="0.01"
-							/>
+					{/* Add Expense Section */}
+					<div className="p-6 border-b border-gray-200">
+						<h3 className="text-lg font-bold text-gray-800 mb-4">Add New Expense</h3>
+						<div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+							<div>
+								<label className="block text-sm font-semibold text-gray-700 mb-1">Amount</label>
+								<input
+									type="number"
+									value={amount}
+									onChange={(e) => setAmount(e.target.value)}
+									className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+									placeholder="0.00"
+									min="0"
+									step="0.01"
+								/>
+							</div>
+							<div className="md:col-span-1">
+								<label className="block text-sm font-semibold text-gray-700 mb-1">Description</label>
+								<input
+									type="text"
+									value={description}
+									onChange={(e) => setDescription(e.target.value)}
+									className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+									placeholder="e.g., Rent, Utilities"
+								/>
+							</div>
+							<button
+								onClick={addExpense}
+								className="w-full md:w-auto px-6 py-2 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition shadow"
+							>
+								Add Expense
+							</button>
 						</div>
-						<div>
-							<label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
-							<input
-								type="text"
-								value={description}
-								onChange={(e) => setDescription(e.target.value)}
-								className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500"
-								placeholder="Electricity, Rent, Delivery, etc."
-							/>
-						</div>
-						<button
-							onClick={addExpense}
-							className="px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl font-semibold hover:from-orange-600 hover:to-amber-600 transition-all shadow-md"
-						>
-							Add
-						</button>
 					</div>
-				</div>
 
-				<div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-					<div className="px-6 py-4 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold">Expenses List</div>
-					{loading ? (
-						<div className="flex items-center justify-center py-20">
-							<p className="text-gray-500">Loading expenses...</p>
+					{/* Filters and Summary */}
+					<div className="p-6 bg-gray-50">
+						<div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+							<div>
+								<label className="block text-sm font-semibold text-gray-700 mb-1">From</label>
+								<input
+									type="date"
+									value={from}
+									onChange={(e) => setFrom(e.target.value)}
+									className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+								/>
+							</div>
+							<div>
+								<label className="block text-sm font-semibold text-gray-700 mb-1">To</label>
+								<input
+									type="date"
+									value={to}
+									onChange={(e) => setTo(e.target.value)}
+									className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+								/>
+							</div>
+							<button
+								onClick={load}
+								className="w-full md:w-auto px-6 py-2 bg-amber-500 text-white rounded-lg font-semibold hover:bg-amber-600 transition shadow"
+								disabled={loading}
+							>
+								{loading ? "Loading..." : "Load Report"}
+							</button>
+							<div className="bg-amber-100 border border-amber-200 rounded-lg p-3 text-center">
+								<p className="text-xs text-gray-600 uppercase font-bold">Total Expenses</p>
+								<p className="text-xl font-bold text-gray-900">Rs. {total.toFixed(2)}</p>
+							</div>
 						</div>
-					) : rows.length === 0 ? (
-						<div className="text-center py-20">
-							<p className="text-gray-500">No expenses found for this range</p>
-						</div>
-					) : (
-						<div className="overflow-x-auto">
+					</div>
+
+					{/* Expenses Table */}
+					<div className="overflow-x-auto">
+						{loading ? (
+							<div className="flex items-center justify-center py-20">
+								<p className="text-gray-500">Loading expenses...</p>
+							</div>
+						) : rows.length === 0 ? (
+							<div className="text-center py-20 px-6">
+								<p className="text-gray-500">No expenses found for the selected date range.</p>
+							</div>
+						) : (
 							<table className="min-w-full divide-y divide-gray-200">
 								<thead className="bg-gray-50">
 									<tr>
-										<th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Date</th>
-										<th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">User</th>
-										<th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Description</th>
-										<th className="px-6 py-3 text-right text-xs font-bold text-gray-700 uppercase">Amount</th>
+										<th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Date</th>
+										<th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">User</th>
+										<th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Description</th>
+										<th className="px-6 py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">Amount</th>
 									</tr>
 								</thead>
 								<tbody className="bg-white divide-y divide-gray-200">
@@ -177,8 +180,8 @@ export default function Expenses({ onBack }) {
 									))}
 								</tbody>
 							</table>
-						</div>
-					)}
+						)}
+					</div>
 				</div>
 			</div>
 		</div>

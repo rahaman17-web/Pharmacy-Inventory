@@ -25,13 +25,14 @@ const Login = ({ onLogin }) => {
     return () => { mounted = false };
   }, []);
 
-  const handleLogin = async () => {
+  const handleLogin = async (e) => {
+    e?.preventDefault();
     try {
       const { data } = await api.post("/auth/login", { username: selectedUsername, password });
       const { token, user } = data;
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
-      onLogin(user);
+      onLogin(user, token);
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.error || "Login failed");
@@ -45,7 +46,7 @@ const Login = ({ onLogin }) => {
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-white opacity-10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
       <div className="absolute top-1/2 left-1/2 w-80 h-80 bg-white opacity-5 rounded-full blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
       
-      <div className="backdrop-blur-lg bg-white/10 p-10 rounded-3xl shadow-2xl w-full max-w-md border border-white/20 transform transition duration-500 hover:scale-105">
+      <div className="backdrop-blur-lg bg-white/10 p-6 sm:p-10 rounded-3xl shadow-2xl w-full max-w-md mx-4 sm:mx-0 border border-white/20 transform transition duration-500 hover:scale-105">
         <div className="text-center mb-8">
           <div className="inline-block p-4 bg-white/20 rounded-full mb-4">
             <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -105,7 +106,6 @@ const Login = ({ onLogin }) => {
         >
           Login
         </button>
-        
         
       </div>
     </div>
