@@ -1,4 +1,4 @@
-import { Routes, Route, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { SunIcon, MoonIcon, Squares2X2Icon, Bars3Icon } from '@heroicons/react/24/outline';
 import SaleInvoice from "./SaleInvoice.jsx";
@@ -12,6 +12,7 @@ import Expenses from "./Expenses.jsx";
 import ReprintInvoice from "./ReprintInvoice.jsx";
 import AdminUsers from "./AdminUsers.jsx";
 import Sidebar from "./Sidebar.jsx";
+import ProductsManagement from "./ProductsManagement.jsx";
 
 // ─── Card (used in Grid view only) ─────────────────────────────────────────
 const COLORS = {
@@ -56,8 +57,9 @@ const SidebarWelcome = ({ user }) => {
     { to: '/reprint',     color: 'indigo', title: 'Reprint Invoice',    description: 'Find and reprint old invoices',           icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg> },
     { to: '/user-sales',  color: 'blue',   title: 'My Sales History',   description: 'View your personal sales history',        icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
     ...(isAdminOrManager ? [
-      { to: '/expenses',      color: 'orange', title: 'Expenses',         description: 'Track pharmacy expenses',               icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-10V6m0 12v-2m9-4a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
-      { to: '/sales-report',  color: 'purple', title: 'Sales Report',     description: 'View detailed sales reports',           icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" /></svg> },
+      { to: '/expenses',      color: 'orange', title: 'Expenses',             description: 'Track pharmacy expenses',               icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-10V6m0 12v-2m9-4a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
+      { to: '/sales-report',  color: 'purple', title: 'Sales Report',         description: 'View detailed sales reports',           icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" /></svg> },
+      { to: '/products',      color: 'blue',   title: 'Products',            description: 'Add, edit or remove products',          icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg> },
     ] : []),
     ...(isAdmin ? [
       { to: '/admin/users',   color: 'red',    title: 'User Management',  description: 'Manage accounts and roles',             icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg> },
@@ -97,8 +99,9 @@ const GridHome = ({ user }) => (
       <Card to="/reprint"     color="indigo" title="Reprint Invoice"   description="Find and reprint old invoices"        icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>} />
       <Card to="/user-sales"  color="blue"   title="My Sales History"  description="View your personal sales history"     icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
       {(user.role === 'admin' || user.role === 'manager') && <>
-        <Card to="/expenses"      color="orange" title="Expenses"       description="Track pharmacy expenses"             icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-10V6m0 12v-2m9-4a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
-        <Card to="/sales-report"  color="purple" title="Sales Report"   description="View detailed sales reports"         icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" /></svg>} />
+        <Card to="/expenses"      color="orange" title="Expenses"             description="Track pharmacy expenses"             icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-10V6m0 12v-2m9-4a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
+        <Card to="/sales-report"  color="purple" title="Sales Report"         description="View detailed sales reports"         icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" /></svg>} />
+        <Card to="/products"      color="blue"   title="Products"            description="Add, edit or remove products"        icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>} />
       </>}
       {user.role === 'admin' && <>
         <Card to="/admin/users"  color="red"    title="User Management" description="Manage accounts and roles"           icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>} />
@@ -122,9 +125,10 @@ const AppRoutes = ({ user, homeElement }) => {
       <Route path="/returns"      element={<Returns user={user} onBack={goHome} />} />
       <Route path="/reprint"      element={<ReprintInvoice onBack={goHome} />} />
       <Route path="/expenses"     element={<Expenses user={user} onBack={goHome} />} />
-      <Route path="/sales-report" element={<SalesReport onBack={goHome} />} />
+      <Route path="/sales-report" element={(user.role === 'admin' || user.role === 'manager') ? <SalesReport onBack={goHome} /> : <Navigate to="/" replace />} />
       <Route path="/user-sales"   element={<UserSalesHistory user={user} onBack={goHome} />} />
       <Route path="/user-sales/:userId" element={<UserSalesHistory user={user} onBack={goHome} />} />
+      <Route path="/products"     element={(user.role === 'admin' || user.role === 'manager') ? <ProductsManagement user={user} onBack={goHome} /> : <Navigate to="/" replace />} />
       <Route path="/admin/users"  element={<AdminUsers onBack={goHome} />} />
       <Route path="/admin/audit"  element={<AdminAudit onBack={goHome} />} />
     </Routes>

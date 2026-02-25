@@ -7,14 +7,14 @@ Quick start
 
 ```bash
 cd Backend
-npm install
+pnpm install
 ```
 
 3. Create the Postgres database and run the SQL in `src/models/migrations.sql`.
 4. Start server:
 
 ```bash
-npm run dev
+pnpm run start:dev
 ```
 
 APIs

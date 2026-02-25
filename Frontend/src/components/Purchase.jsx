@@ -21,6 +21,7 @@ const emptyRow = () => ({
 
 export default function Purchase({ onBack }) {
   const [supplier, setSupplier] = useState("");
+  const [supplierId, setSupplierId] = useState(null);
   const [invoiceNo, setInvoiceNo] = useState("");
   const [purchaseDate, setPurchaseDate] = useState("");
   const [receiveDate, setReceiveDate] = useState("");
@@ -184,6 +185,7 @@ export default function Purchase({ onBack }) {
     try {
       // Clear all form data
       setSupplier('');
+      setSupplierId(null);
       setPurchaseDate(new Date().toISOString().split('T')[0]);
       setReceiveDate(new Date().toISOString().split('T')[0]);
       setIsTestingItem(false);
@@ -199,6 +201,7 @@ export default function Purchase({ onBack }) {
       console.error('Error creating new invoice:', error);
       // Fallback
       setSupplier('');
+      setSupplierId(null);
       setPurchaseDate(new Date().toISOString().split('T')[0]);
       setReceiveDate(new Date().toISOString().split('T')[0]);
       setIsTestingItem(false);
@@ -276,17 +279,6 @@ export default function Purchase({ onBack }) {
       }
 
       try {
-        const api = (await import("../api")).default;
-        const { data } = await api.get("/products");
-        setAvailableProducts(Array.isArray(data) ? data : []);
-      } catch (e) {}
-
-      try {
-        const rs = JSON.parse(localStorage.getItem("recent_suppliers") || "[]");
-        setRecentSuppliers(Array.isArray(rs) ? rs : []);
-      } catch (e) {}
-
-      try {
         const draft = JSON.parse(localStorage.getItem("purchase_draft") || "null");
         if (draft) {
           setSupplier(draft.supplier || "");
@@ -296,6 +288,38 @@ export default function Purchase({ onBack }) {
       } catch (e) {}
     })();
   }, []);
+
+  // Fetch supplier suggestions + resolve supplierId when supplier name changes
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (!supplier.trim()) {
+        setRecentSuppliers([]);
+        setSupplierId(null);
+        return;
+      }
+      try {
+        const api = (await import('../api')).default;
+        const { data } = await api.get(`/suppliers?q=${encodeURIComponent(supplier)}`);
+        const list = Array.isArray(data) ? data : [];
+        setRecentSuppliers(list);
+        const match = list.find(d => d.name.toLowerCase() === supplier.trim().toLowerCase());
+        setSupplierId(match ? match.id : null);
+      } catch (e) {}
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [supplier]);
+
+  // Re-fetch products whenever the resolved supplierId changes
+  useEffect(() => {
+    (async () => {
+      try {
+        const api = (await import('../api')).default;
+        const url = supplierId ? `/products?supplier_id=${supplierId}` : '/products';
+        const { data } = await api.get(url);
+        setAvailableProducts(Array.isArray(data) ? data : []);
+      } catch (e) {}
+    })();
+  }, [supplierId]);
 
   const savePurchase = async (shouldPrint) => {
     try {
@@ -533,8 +557,8 @@ export default function Purchase({ onBack }) {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Supplier</label>
-                  <input ref={supplierRef} list="suppliers" value={supplier} onChange={async (e)=>{setSupplier(e.target.value); try{ if(e.target.value.trim()){ const api=(await import('../api')).default; const {data}=await api.get(`/suppliers?q=${encodeURIComponent(e.target.value)}`); setRecentSuppliers(Array.isArray(data)?data.map(d=>d.name):[]); } }catch(e){} }} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();barcodeRef.current?.focus();}}} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700" />
-                  <datalist id="suppliers">{recentSuppliers.map((s,i)=>(<option value={s} key={i}/>))}</datalist>
+                  <input ref={supplierRef} list="suppliers" value={supplier} onChange={(e)=>{ setSupplier(e.target.value); setSupplierId(null); }} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();barcodeRef.current?.focus();}}} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700" />
+                  <datalist id="suppliers">{recentSuppliers.map((s,i)=>(<option value={s.name} key={i}/>))}</datalist>
                 </div>
                 <div className="sm:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Barcode</label>
@@ -686,6 +710,7 @@ export default function Purchase({ onBack }) {
                                         onEnter={() => qtyRefs.current[i]?.focus()}
                                         allItems={availableProducts}
                                         placeholder="Search product..."
+                                        allowCreate={false}
                                     />
                                 </td>
                                 <td className="p-2"><input ref={(el) => (qtyRefs.current[i] = el)} type="number" value={r.quantity} onChange={(e) => updateRow(i, { quantity: e.target.value })} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();salePriceRefs.current[i]?.focus();}}} className="w-20 p-1 text-center border rounded bg-white dark:bg-gray-700" /></td>

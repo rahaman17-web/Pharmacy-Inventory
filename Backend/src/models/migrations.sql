@@ -131,3 +131,6 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   details JSONB,
   created_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Add supplier_id to products (safe to run multiple times)
+ALTER TABLE products ADD COLUMN IF NOT EXISTS supplier_id INTEGER REFERENCES suppliers(id) ON DELETE SET NULL;
