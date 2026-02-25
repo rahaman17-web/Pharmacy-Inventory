@@ -63,7 +63,7 @@ export default function Receipt({ saleId, onClose, autoPrint = false }) {
           <div>
             <div className="text-xl font-semibold">Zam Zam Pharmacy</div>
             <div className="text-sm text-gray-500">Invoice: {sale.id}</div>
-            <div className="text-sm text-gray-500">Date: {new Date(sale.created_at).toLocaleString()}</div>
+            <div className="text-sm text-gray-500">Date: {new Date(sale.created_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}</div>
             {sale.user && (
               <div className="text-sm text-gray-500">Salesman: {sale.user.username} {sale.user.role ? `(${sale.user.role})` : ''}</div>
             )}
@@ -83,7 +83,7 @@ export default function Receipt({ saleId, onClose, autoPrint = false }) {
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: '14px', fontWeight: '800' }}>INVOICE #{sale.id}</div>
-              <div style={{ fontSize: '11px', color: '#666' }}>{new Date(sale.created_at).toLocaleString()}</div>
+              <div style={{ fontSize: '11px', color: '#666' }}>{new Date(sale.created_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}</div>
             </div>
           </div>
 

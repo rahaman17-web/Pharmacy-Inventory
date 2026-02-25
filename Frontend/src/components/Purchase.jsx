@@ -498,69 +498,84 @@ export default function Purchase({ onBack }) {
   };
 
   return (
-    <div className="min-h-screen p-4" style={{backgroundColor: '#E8F5A8'}}>
-      {/* Header matching screenshot */}
-      <div className="mb-3">
-        <div className="py-3" style={{backgroundColor: '#D4E157'}}>
-          <h1 className="text-3xl font-bold text-center" style={{color: '#5D4E37'}}>Purchase Invoice</h1>
-        </div>
-
-        <div className="p-3" style={{backgroundColor: '#FFB74D'}}>
-          <div className="grid grid-cols-12 gap-2 items-start">
-            <div className="col-span-1 flex flex-col gap-1">
-              <div className="text-xs font-semibold mb-1 text-center">Availability</div>
-              <label className="flex items-center gap-1 text-xs">
-                <input 
-                  type="checkbox" 
-                  checked={isTestingItem}
-                  onChange={(e) => setIsTestingItem(e.target.checked)}
-                  className="rounded"
-                />
-                🧪 Testing Item
-              </label>
-              
-              {isTestingItem && (
-                <div className="text-xs">
-                  <label className="block mb-1">Return Date:</label>
-                  <input 
-                    type="date" 
-                    value={testingReturnDate} 
-                    onChange={(e) => setTestingReturnDate(e.target.value)}
-                    className="w-full px-1 py-1 border border-gray-400 text-xs rounded"
-                  />
-                </div>
-              )}
+    <div className="p-2 sm:p-4 lg:p-6 bg-gray-50 dark:bg-gray-900/90 flex-1 overflow-y-auto">
+      <div>
+        {/* Header */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden border border-gray-200 dark:border-gray-700 mb-6">
+          <div className="bg-gray-800 dark:bg-gray-900 px-4 sm:px-6 py-4 text-white">
+            <div className="flex justify-between items-center">
+              <h1 className="text-xl sm:text-2xl font-bold">Purchase Invoice</h1>
+              <button
+                onClick={onBack}
+                className={`px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded font-semibold transition whitespace-nowrap ring-offset-gray-800 ring-blue-400 focus:ring-2 focus:ring-offset-2`}
+              >
+                ← Back
+              </button>
             </div>
+          </div>
 
-            <div className="col-span-7 grid grid-cols-12 gap-2 items-center text-xs">
-              <label className="col-span-2 font-semibold">Inv. Date</label>
-              <input ref={invDateRef} type="date" value={purchaseDate} onChange={(e)=>setPurchaseDate(e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();invNoRef.current?.focus();}}} className="col-span-4 border border-gray-400 px-1 py-1 text-xs" />
-              <label className="col-span-2 font-semibold">Invoice No.</label>
-              <input ref={invNoRef} value={invoiceNo} onChange={(e)=>setInvoiceNo(e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();receiveDateRef.current?.focus();}}} className="col-span-4 border border-gray-400 px-1 py-1 text-xs" />
-                
-                <label className="col-span-2 font-semibold">Receive Date</label>
-                <input ref={receiveDateRef} type="date" value={receiveDate} onChange={(e)=>setReceiveDate(e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();supplierRef.current?.focus();}}} className="col-span-10 border border-gray-400 px-1 py-1 text-xs" />
-                
-                <label className="col-span-2 font-semibold">Supplier</label>
-                <input ref={supplierRef} list="suppliers" value={supplier} onChange={async (e)=>{setSupplier(e.target.value); try{ if(e.target.value.trim()){ const api=(await import('../api')).default; const {data}=await api.get(`/suppliers?q=${encodeURIComponent(e.target.value)}`); setRecentSuppliers(Array.isArray(data)?data.map(d=>d.name):[]); } }catch(e){} }} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();barcodeRef.current?.focus();}}} className="col-span-10 border border-gray-400 px-1 py-1 text-xs" />
-                <datalist id="suppliers">{recentSuppliers.map((s,i)=>(<option value={s} key={i}/>))}</datalist>
+          {/* Top Form */}
+          <div className="p-4 sm:p-6">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+              {/* Left Side */}
+              <div className="md:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Invoice Date</label>
+                  <input ref={invDateRef} type="date" value={purchaseDate} onChange={(e)=>setPurchaseDate(e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();invNoRef.current?.focus();}}} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Invoice No.</label>
+                  <input ref={invNoRef} value={invoiceNo} onChange={(e)=>setInvoiceNo(e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();receiveDateRef.current?.focus();}}} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Receive Date</label>
+                  <input ref={receiveDateRef} type="date" value={receiveDate} onChange={(e)=>setReceiveDate(e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();supplierRef.current?.focus();}}} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Supplier</label>
+                  <input ref={supplierRef} list="suppliers" value={supplier} onChange={async (e)=>{setSupplier(e.target.value); try{ if(e.target.value.trim()){ const api=(await import('../api')).default; const {data}=await api.get(`/suppliers?q=${encodeURIComponent(e.target.value)}`); setRecentSuppliers(Array.isArray(data)?data.map(d=>d.name):[]); } }catch(e){} }} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();barcodeRef.current?.focus();}}} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700" />
+                  <datalist id="suppliers">{recentSuppliers.map((s,i)=>(<option value={s} key={i}/>))}</datalist>
+                </div>
+                <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Barcode</label>
+                    <input ref={barcodeRef} placeholder="Scan or enter barcode..." onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();itemRefs.current[0]?.focus();}}} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700" />
+                </div>
               </div>
 
-              <div className="col-span-4">
-                <div className="mb-1 text-xs font-semibold">Purchase Actions</div>
-                <div className="flex gap-2 mb-2">
-                  <button onClick={createNewInvoice} className="flex-1 px-3 py-2 bg-green-600 text-white border border-green-700 text-xs hover:bg-green-700 rounded">
-                    ➕ New Invoice
-                  </button>
-                  <button onClick={showAllInvoices} className="flex-1 px-3 py-2 bg-blue-600 text-white border border-blue-700 text-xs hover:bg-blue-700 rounded">
-                    📋 Previous Invoices
-                  </button>
+              {/* Right Side */}
+              <div className="md:col-span-4 flex flex-col gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Purchase Actions</label>
+                  <div className="flex gap-2">
+                    <button onClick={createNewInvoice} className="flex-1 px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700">
+                      New Invoice
+                    </button>
+                    <button onClick={showAllInvoices} className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700">
+                      Previous Invoices
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-2 items-center text-xs">
-                  <span>Packs</span>
-                  <input className="w-16 border border-gray-400 px-1 py-1 text-xs" />
-                  <span>Pieces</span>
-                  <input className="w-16 border border-gray-400 px-1 py-1 text-xs" />
+                <div>
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <input 
+                        type="checkbox" 
+                        checked={isTestingItem}
+                        onChange={(e) => setIsTestingItem(e.target.checked)}
+                        className="rounded h-4 w-4 text-blue-600 focus:ring-blue-500"
+                        />
+                        Testing Item
+                    </label>
+                    {isTestingItem && (
+                        <div className="mt-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Return Date:</label>
+                        <input 
+                            type="date" 
+                            value={testingReturnDate} 
+                            onChange={(e) => setTestingReturnDate(e.target.value)}
+                            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
+                        />
+                        </div>
+                    )}
                 </div>
               </div>
             </div>
@@ -569,294 +584,150 @@ export default function Purchase({ onBack }) {
 
         {/* Invoice List Modal */}
         {showInvoiceList && (
-          <div className="mb-4 bg-white border border-gray-300 rounded shadow-lg max-h-96 overflow-y-auto">
-            <div className="p-3 bg-blue-100 border-b">
-              <div className="flex justify-between items-center mb-2">
-                <div>
-                  <h3 className="font-semibold text-sm text-blue-800">📋 Previous Invoices</h3>
-                  <p className="text-xs text-blue-600">Search and click on any invoice to load</p>
+          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <h3 className="font-semibold text-lg text-gray-800 dark:text-white">Previous Invoices</h3>
+                <button onClick={() => setShowInvoiceList(false)} className="text-gray-500 hover:text-gray-800 dark:hover:text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+              <div className="p-4">
+                <div className="flex gap-2 mb-4">
+                  <input 
+                    type="text" 
+                    value={searchInvoice} 
+                    onChange={(e) => setSearchInvoice(e.target.value)}
+                    placeholder="Search by invoice number..."
+                    className="flex-1 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700"
+                  />
+                  <button onClick={() => searchInvoices(searchInvoice)} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Search</button>
+                  <button onClick={() => {setSearchInvoice(''); showAllInvoices();}} className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600">Show All</button>
                 </div>
-                <button onClick={() => setShowInvoiceList(false)} className="text-red-600 hover:text-red-800 font-bold text-lg">×</button>
               </div>
-              {/* Search within modal */}
-              <div className="flex gap-2">
-                <input 
-                  type="text" 
-                  value={searchInvoice} 
-                  onChange={(e) => setSearchInvoice(e.target.value)}
-                  placeholder="Search by invoice number..."
-                  className="flex-1 border border-blue-300 px-2 py-1 text-xs rounded focus:border-blue-500 focus:outline-none"
-                />
-                <button 
-                  onClick={() => searchInvoices(searchInvoice)}
-                  className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
-                >
-                  🔍 Search
-                </button>
-                <button 
-                  onClick={() => {setSearchInvoice(''); showAllInvoices();}}
-                  className="px-3 py-1 bg-gray-500 text-white text-xs rounded hover:bg-gray-600"
-                >
-                  Show All
-                </button>
-              </div>
-            </div>
-            {invoiceList.length > 0 ? (
-              <div className="max-h-64 overflow-y-auto">
-                {invoiceList
-                  .filter(inv => !searchInvoice || inv.invoice_no.toString().includes(searchInvoice))
-                  .map((inv, i) => (
-                  <div key={i} className="p-3 border-b hover:bg-blue-50 cursor-pointer text-xs transition-colors" 
-                       onClick={() => viewInvoiceDetails(inv)}>
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="font-semibold text-blue-800">📄 Invoice #{inv.invoice_no}</div>
-                        <div className="text-gray-600 mt-1">🏪 Supplier: {inv.supplier_name || 'N/A'}</div>
-                        <div className="text-gray-600">📅 Date: {inv.purchase_date}</div>
-                        <div className="text-green-600 font-semibold">💰 ₹{inv.total_amount || 0}</div>
-                        <div className="text-xs text-blue-500 mt-1">👆 Click to view invoice</div>
-                      </div>
-                      <div className="ml-4">
-                        <button 
-                          onClick={(e) => {e.stopPropagation(); reprintInvoice(inv);}}
-                          className="px-3 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600"
-                        >
-                          🖨️ Reprint
-                        </button>
+              <div className="flex-1 overflow-y-auto">
+                {invoiceList.length > 0 ? (
+                  invoiceList
+                    .filter(inv => !searchInvoice || inv.invoice_no.toString().includes(searchInvoice))
+                    .map((inv, i) => (
+                    <div key={i} className="p-4 border-t border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onClick={() => viewInvoiceDetails(inv)}>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="font-semibold text-blue-600 dark:text-blue-400">Invoice #{inv.invoice_no}</div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400">Supplier: {inv.supplier_name || 'N/A'}</div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400">Date: {inv.purchase_date}</div>
+                          <div className="font-semibold text-green-600">Rs. {inv.total_amount || 0}</div>
+                        </div>
+                        <button onClick={(e) => {e.stopPropagation(); reprintInvoice(inv);}} className="px-3 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600">Reprint</button>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="p-6 text-center text-gray-500">No invoices found.</div>
+                )}
               </div>
-            ) : (
-              <div className="p-6 text-center text-gray-500 text-sm">
-                <div className="text-2xl mb-2">📄</div>
-                <div>{searchInvoice ? `No invoices found matching "${searchInvoice}"` : 'No invoices found'}</div>
-                <div className="text-xs text-gray-400 mt-1">{searchInvoice ? 'Try a different search term' : 'Try creating a new invoice'}</div>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="mb-2 text-xs font-semibold px-2">Barcode</div>
-        <input ref={barcodeRef} placeholder="Scan or enter barcode..." onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();itemRefs.current[0]?.focus();}}} className="w-full border border-gray-400 px-2 py-1 text-sm mb-3" style={{backgroundColor: '#FFFDE7'}} />
-        
-        {medicines.length === 0 && (
-          <div className="text-center mb-4">
-            <button 
-              onClick={() => setMedicines([emptyRow()])} 
-              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-sm shadow-lg"
-            >
-              📋 Start Adding Items
-            </button>
+            </div>
           </div>
         )}
 
         {/* Items Table */}
-        {medicines.length > 0 && (
-          <div className="mb-3 overflow-hidden" style={{backgroundColor: '#FFFDE7'}}>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr style={{backgroundColor: '#B2EBF2'}} className="border-b border-gray-400">
-                  <th className="px-2 py-2 text-left text-sm font-semibold text-gray-800 border-r border-gray-300">SNo.</th>
-                  <th className="px-2 py-2 text-left text-sm font-semibold text-gray-800 border-r border-gray-300">ProductID</th>
-                  <th className="px-2 py-2 text-left text-sm font-semibold text-gray-800 border-r border-gray-300">Product</th>
-                  <th className="px-2 py-2 text-center text-sm font-semibold text-gray-800 border-r border-gray-300">Packs<br/><span className="font-normal text-xs">(Qty)</span></th>
-                  <th className="px-2 py-2 text-center text-sm font-semibold text-gray-800 border-r border-gray-300">Pieces</th>
-                  <th className="px-2 py-2 text-center text-sm font-semibold text-gray-800 border-r border-gray-300">Sale Price</th>
-                  <th className="px-2 py-2 text-center text-sm font-semibold text-gray-800 border-r border-gray-300">Disc%</th>
-                  <th className="px-2 py-2 text-center text-sm font-semibold text-gray-800 border-r border-gray-300">Extra%</th>
-                  <th className="px-2 py-2 text-center text-sm font-semibold text-gray-800 border-r border-gray-300">GST</th>
-                  <th className="px-2 py-2 text-center text-sm font-semibold text-gray-800 border-r border-gray-300">Pur Price</th>
-                  <th className="px-2 py-2 text-left text-sm font-semibold text-gray-800 border-r border-gray-300">Batch</th>
-                  <th className="px-2 py-2 text-center text-sm font-semibold text-gray-800 border-r border-gray-300">Bonus</th>
-                  <th className="px-2 py-2 text-left text-sm font-semibold text-gray-800 border-r border-gray-300">Expiry</th>
-                  <th className="px-2 py-2 text-center text-sm font-semibold text-gray-800 border-r border-gray-300">Gross Amount</th>
-                  <th className="px-2 py-2 text-center text-sm font-semibold text-gray-800 border-r border-gray-300">Pack Size<br/><span className="font-normal text-xs">(Pcs/Pack)</span></th>
-                  <th className="px-2 py-2 text-center text-sm font-semibold text-gray-800">X</th>
-                </tr>
-              </thead>
-              <tbody>
-                {medicines.map((r, i) => {
-                  const errs = attemptedSubmit ? validateRow(r) : {};
-                  const t = getTotals(r);
-                  const autoCalcPrice = (() => {
-                    const salePrice = Number(r.sellingPrice) || 0;
-                    const disc1 = Number(r.discount1) || 0;
-                    const disc2 = Number(r.discount2) || 0;
-                    const gst = Number(r.gst) || 0;
-                    
-                    // If user manually entered purchase rate and no sale price, use manual rate
-                    if (r.purchaseRate && !salePrice) return r.purchaseRate;
-                    
-                    // If we have sale price, always calculate from it
-                    if (salePrice > 0) {
-                      let price = salePrice;
-                      price = price * (1 - disc1/100);  // Apply first discount
-                      price = price * (1 - disc2/100);  // Apply second discount  
-                      price = price * (1 + gst/100);    // Add GST
-                      return price.toFixed(2);
-                    }
-                    
-                    // Fallback to manual purchase rate
-                    return r.purchaseRate || '';
-                  })();
-                  return (
-                    <tr key={i} className="border-b border-gray-300">
-                      <td className="px-2 py-1 text-center text-sm border-r border-gray-300">{i + 1}</td>
-                      <td className="px-2 py-1 border-r border-gray-300"><input ref={(el) => (itemRefs.current[i] = el)} value={r.product_id || ''} onChange={(e) => updateRow(i, { product_id: e.target.value })} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();productNameRefs.current[i]?.focus();}}} className="w-full border-0 px-2 py-1 text-sm bg-transparent" /></td>
-                      <td className="px-2 py-1 border-r border-gray-300"><input ref={(el) => (productNameRefs.current[i] = el)} value={typeof r.name === 'string' ? r.name : (r.name?.name || '')} onChange={(e) => updateRow(i, { name: e.target.value }, { checkAdd: true })} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();packRefs.current[i]?.focus();}}} className={`w-full border-0 px-2 py-1 text-sm bg-transparent ${attemptedSubmit && !r.name ? 'bg-red-50' : ''}`} /></td>
-                      <td className="px-2 py-1 border-r border-gray-300 text-center"><input ref={(el) => (packRefs.current[i] = el)} type="number" value={r.pack_size} onChange={(e) => updateRow(i, { pack_size: e.target.value })} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();qtyRefs.current[i]?.focus();}}} className="w-full border-0 px-2 py-1 text-sm text-center bg-transparent" /></td>
-                      <td className="px-2 py-1 border-r border-gray-300 text-center"><input ref={(el) => (qtyRefs.current[i] = el)} type="number" value={r.quantity} onChange={(e) => updateRow(i, { quantity: e.target.value })} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();salePriceRefs.current[i]?.focus();}}} className={`w-full border-0 px-2 py-1 text-sm text-center bg-transparent ${attemptedSubmit && (!r.quantity || Number(r.quantity) <= 0) ? 'bg-red-50' : ''}`} /></td>
-                      <td className="px-2 py-1 border-r border-gray-300 text-center"><input ref={(el) => (salePriceRefs.current[i] = el)} type="number" value={r.sellingPrice} onChange={(e) => updateRow(i, { sellingPrice: e.target.value })} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();disc1Refs.current[i]?.focus();}}} className="w-full border-0 px-2 py-1 text-sm text-center bg-transparent" /></td>
-                      <td className="px-2 py-1 border-r border-gray-300 text-center"><input ref={(el) => (disc1Refs.current[i] = el)} type="number" value={r.discount1} onChange={(e) => updateRow(i, { discount1: e.target.value })} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();disc2Refs.current[i]?.focus();}}} className="w-full border-0 px-2 py-1 text-sm text-center bg-transparent" /></td>
-                      <td className="px-2 py-1 border-r border-gray-300 text-center"><input ref={(el) => (disc2Refs.current[i] = el)} type="number" value={r.discount2} onChange={(e) => updateRow(i, { discount2: e.target.value })} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();gstRefs.current[i]?.focus();}}} className="w-full border-0 px-2 py-1 text-sm text-center bg-transparent" /></td>
-                      <td className="px-2 py-1 border-r border-gray-300 text-center"><input ref={(el) => (gstRefs.current[i] = el)} type="number" value={r.gst} onChange={(e) => updateRow(i, { gst: e.target.value })} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();purPriceRefs.current[i]?.focus();}}} className="w-full border-0 px-2 py-1 text-sm text-center bg-transparent" /></td>
-                      <td className="px-2 py-1 border-r border-gray-300 text-center"><input ref={(el) => (purPriceRefs.current[i] = el)} type="number" value={autoCalcPrice} onChange={(e) => updateRow(i, { purchaseRate: e.target.value })} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();batchRefs.current[i]?.focus();}}} className="w-full border-0 px-2 py-1 text-sm text-center bg-transparent" placeholder="Auto-calc" /></td>
-                      <td className="px-2 py-1 border-r border-gray-300"><input ref={(el) => (batchRefs.current[i] = el)} value={r.batch} onChange={(e) => updateRow(i, { batch: e.target.value })} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();bonusRefs.current[i]?.focus();}}} className="w-full border-0 px-2 py-1 text-sm bg-transparent" /></td>
-                      <td className="px-2 py-1 border-r border-gray-300 text-center"><input ref={(el) => (bonusRefs.current[i] = el)} type="number" value={r.bonusQty} onChange={(e) => updateRow(i, { bonusQty: e.target.value })} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();expiryRefs.current[i]?.focus();}}} className="w-full border-0 px-2 py-1 text-sm text-center bg-transparent" /></td>
-                      <td className="px-2 py-1 border-r border-gray-300"><input ref={(el) => (expiryRefs.current[i] = el)} type="date" value={r.expiry} onChange={(e) => updateRow(i, { expiry: e.target.value })} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();const name=typeof r.name==='string'?r.name:(r.name?.name||'');const hasRequired=name.trim()&&r.quantity&&Number(r.quantity)>0&&r.purchaseRate&&Number(r.purchaseRate)>0;if(i===medicines.length-1){if(hasRequired){setMedicines(prev=>[...prev,emptyRow()]);setTimeout(()=>itemRefs.current[i+1]?.focus(),50);}else{alert('Please fill Product Name, Quantity and Purchase Price before adding a new row');productNameRefs.current[i]?.focus();}}else{itemRefs.current[i+1]?.focus();}}}} className="w-full border-0 px-2 py-1 text-sm bg-transparent" /></td>
-                      <td className="px-2 py-1 border-r border-gray-300 text-center text-sm">{t.finalAmt.toFixed(2)}</td>
-                      <td className="px-2 py-1 border-r border-gray-300 text-center text-sm">{r.pack_size}</td>
-                      <td className="px-2 py-1 text-center">{medicines.length > 1 && (<button onClick={() => removeRow(i)} className="text-sm text-red-600">X</button>)}</td>
-                    </tr>
-                  );
-                })}
-                <tr className="border-t border-gray-400">
-                  <td colSpan="16" className="py-1"></td>
-                </tr>
-                <tr className="border-t-2 border-gray-600 font-bold" style={{backgroundColor: '#B2EBF2'}}>
-                  <td colSpan="13" className="px-2 py-2 text-right text-sm border-r border-gray-300">TOTAL:</td>
-                  <td className="px-2 py-2 text-center text-sm border-r border-gray-300">{medicines.reduce((s, r) => s + getTotals(r).finalAmt, 0).toFixed(2)}</td>
-                  <td colSpan="2"></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          {/* Summary Section */}
-          <div className="p-4" style={{backgroundColor: '#FFFDE7'}}>
-            <div className="grid grid-cols-3 gap-4 mb-4">
-              <div>
-                <div className="text-sm font-semibold text-gray-700">Items Summary</div>
-              <div className="text-xs text-gray-600">Packs: {medicines.reduce((sum, r) => sum + Number(r.quantity || 0), 0)}</div>
-              <div className="text-xs text-gray-600">Bonus Packs: {medicines.reduce((sum, r) => sum + Number(r.bonusQty || 0), 0)}</div>
-              <div className="text-xs text-green-600">Total Pieces: {medicines.reduce((sum, r) => sum + getTotals(r).totalPieces, 0)}</div>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden border border-gray-200 dark:border-gray-700">
+            {medicines.length === 0 && (
+            <div className="text-center p-10">
+                <button 
+                onClick={() => setMedicines([emptyRow()])} 
+                className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg shadow-lg"
+                >
+                Start Adding Items
+                </button>
             </div>
-            <div>
-              <div className="text-sm font-semibold text-gray-700">Discounts Applied</div>
-              <div className="text-xs text-green-600">Sale Value: ₹{medicines.reduce((sum, r) => sum + getTotals(r).saleValue, 0).toFixed(2)}</div>
-              <div className="text-xs text-red-600">Savings: ₹{medicines.reduce((sum, r) => sum + getTotals(r).discountAmt, 0).toFixed(2)}</div>
-            </div>
-            <div className="text-right">
-              <div className="text-lg font-semibold">Purchase Total</div>
-              <div className="text-xs text-blue-600">+GST: ₹{medicines.reduce((sum, r) => sum + getTotals(r).gstAmt, 0).toFixed(2)}</div>
-            </div>
-          </div>
-          <div className="flex justify-between items-center mb-4">
-            <div className="text-lg font-semibold">Final Amount: <span className="inline-block bg-blue-200 px-4 py-2 ml-2 text-lg">Rs. {medicines.reduce((s, r) => s + getTotals(r).finalAmt, 0).toFixed(2)}</span></div>
-          </div>
-          <div className="flex gap-3">
-            <button className="px-4 py-2 bg-gray-100 border border-gray-400 text-sm hover:bg-gray-200">Print BarCode 1x1</button>
-            <button className="px-4 py-2 bg-gray-100 border border-gray-400 text-sm hover:bg-gray-200">Products</button>
-            <button className="px-4 py-2 bg-gray-100 border border-gray-400 text-sm hover:bg-gray-200" onClick={onBack}>Exit</button>
-            <button className="px-4 py-2 bg-green-600 text-white border border-green-700 text-sm hover:bg-green-700 font-semibold" onClick={handleSubmit}>💾 Save</button>
-          </div>
-        </div>
-        </div>
-        )}
-
-        {/* Confirmation Modal */}
-      {showConfirmation && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded shadow-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            {/* Invoice Preview */}
-            <div className="border-b pb-4 mb-4">
-              <h2 className="text-xl font-bold text-gray-800 mb-4 text-center">📋 Purchase Invoice Preview</h2>
-              
-              {/* Header Details */}
-              <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
-                <div><strong>Invoice No:</strong> {invoiceNo}</div>
-                <div><strong>Date:</strong> {purchaseDate}</div>
-                <div><strong>Supplier:</strong> {supplier}</div>
-              </div>
-              
-              {/* Items Table Preview */}
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse border border-gray-300 text-xs">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="border border-gray-300 px-2 py-1">Product</th>
-                      <th className="border border-gray-300 px-2 py-1">Batch</th>
-                      <th className="border border-gray-300 px-2 py-1">Expiry</th>
-                      <th className="border border-gray-300 px-2 py-1">Qty</th>
-                      <th className="border border-gray-300 px-2 py-1">Bonus</th>
-                      <th className="border border-gray-300 px-2 py-1">Sale Price</th>
-                      <th className="border border-gray-300 px-2 py-1">Disc%</th>
-                      <th className="border border-gray-300 px-2 py-1">Extra%</th>
-                      <th className="border border-gray-300 px-2 py-1">GST%</th>
-                      <th className="border border-gray-300 px-2 py-1">Purchase Price</th>
-                      <th className="border border-gray-300 px-2 py-1">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {medicines.filter(r => (typeof r.name === 'string' ? r.name : r.name?.name) || r.batch || r.purchaseRate).map((r, i) => {
-                      const t = getTotals(r);
-                      const productName = typeof r.name === 'string' ? r.name : (r.name?.name || '');
-                      return (
-                        <tr key={i}>
-                          <td className="border border-gray-300 px-2 py-1">{productName}</td>
-                          <td className="border border-gray-300 px-2 py-1">{r.batch}</td>
-                          <td className="border border-gray-300 px-2 py-1">{r.expiry || '-'}</td>
-                          <td className="border border-gray-300 px-2 py-1 text-center">{r.quantity}</td>
-                          <td className="border border-gray-300 px-2 py-1 text-center">{r.bonusQty || '-'}</td>
-                          <td className="border border-gray-300 px-2 py-1 text-right">₹{r.sellingPrice || '-'}</td>
-                          <td className="border border-gray-300 px-2 py-1 text-center">{r.discount1}%</td>
-                          <td className="border border-gray-300 px-2 py-1 text-center">{r.discount2}%</td>
-                          <td className="border border-gray-300 px-2 py-1 text-center">{r.gst}%</td>
-                          <td className="border border-gray-300 px-2 py-1 text-right">₹{t.calculatedPurchaseRate.toFixed(2)}</td>
-                          <td className="border border-gray-300 px-2 py-1 text-right">₹{t.finalAmt.toFixed(2)}</td>
+            )}
+            {medicines.length > 0 && (
+                <>
+                <div className="overflow-x-auto">
+                    <table className="w-full min-w-[1200px]">
+                    <thead className="bg-gray-50 dark:bg-gray-700">
+                        <tr>
+                            <th className="py-2 px-2 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">#</th>
+                            <th className="py-2 px-2 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">Product</th>
+                            <th className="py-2 px-2 text-center text-sm font-semibold text-gray-600 dark:text-gray-300">Qty</th>
+                            <th className="py-2 px-2 text-center text-sm font-semibold text-gray-600 dark:text-gray-300">Sale Price</th>
+                            <th className="py-2 px-2 text-center text-sm font-semibold text-gray-600 dark:text-gray-300">Disc%</th>
+                            <th className="py-2 px-2 text-center text-sm font-semibold text-gray-600 dark:text-gray-300">GST%</th>
+                            <th className="py-2 px-2 text-center text-sm font-semibold text-gray-600 dark:text-gray-300">Pur. Price</th>
+                            <th className="py-2 px-2 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">Batch</th>
+                            <th className="py-2 px-2 text-center text-sm font-semibold text-gray-600 dark:text-gray-300">Bonus</th>
+                            <th className="py-2 px-2 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">Expiry</th>
+                            <th className="py-2 px-2 text-right text-sm font-semibold text-gray-600 dark:text-gray-300">Total</th>
+                            <th className="py-2 px-2 text-center text-sm font-semibold text-gray-600 dark:text-gray-300">Action</th>
                         </tr>
-                      );
-                    })}
-                    <tr className="bg-blue-50 font-semibold">
-                      <td colSpan="10" className="border border-gray-300 px-2 py-1 text-right">Grand Total:</td>
-                      <td className="border border-gray-300 px-2 py-1 text-right">₹{medicines.reduce((s, r) => s + getTotals(r).finalAmt, 0).toFixed(2)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                        {medicines.map((r, i) => {
+                        const t = getTotals(r);
+                        const autoCalcPrice = (() => {
+                            const salePrice = Number(r.sellingPrice) || 0;
+                            if (salePrice > 0) {
+                            let price = salePrice * (1 - (Number(r.discount1) || 0)/100);
+                            price = price * (1 - (Number(r.discount2) || 0)/100);
+                            price = price * (1 + (Number(r.gst) || 0)/100);
+                            return price.toFixed(2);
+                            }
+                            return r.purchaseRate || '';
+                        })();
+                        return (
+                            <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                <td className="p-2 text-center">{i + 1}</td>
+                                <td className="p-2 w-1/4">
+                                    <AutoComplete
+                                        value={{ id: r.product_id, name: r.name }}
+                                        ref={(el) => (productNameRefs.current[i] = el)}
+                                        onSelect={(val) => updateRow(i, { product_id: val?.id, name: val?.name, pack_size: val?.pack_size || 1 }, { checkAdd: true })}
+                                        onEnter={() => qtyRefs.current[i]?.focus()}
+                                        allItems={availableProducts}
+                                        placeholder="Search product..."
+                                    />
+                                </td>
+                                <td className="p-2"><input ref={(el) => (qtyRefs.current[i] = el)} type="number" value={r.quantity} onChange={(e) => updateRow(i, { quantity: e.target.value })} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();salePriceRefs.current[i]?.focus();}}} className="w-20 p-1 text-center border rounded bg-white dark:bg-gray-700" /></td>
+                                <td className="p-2"><input ref={(el) => (salePriceRefs.current[i] = el)} type="number" value={r.sellingPrice} onChange={(e) => updateRow(i, { sellingPrice: e.target.value })} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();disc1Refs.current[i]?.focus();}}} className="w-24 p-1 text-right border rounded bg-white dark:bg-gray-700" /></td>
+                                <td className="p-2"><input ref={(el) => (disc1Refs.current[i] = el)} type="number" value={r.discount1} onChange={(e) => updateRow(i, { discount1: e.target.value })} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();gstRefs.current[i]?.focus();}}} className="w-20 p-1 text-center border rounded bg-white dark:bg-gray-700" /></td>
+                                <td className="p-2"><input ref={(el) => (gstRefs.current[i] = el)} type="number" value={r.gst} onChange={(e) => updateRow(i, { gst: e.target.value })} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();purPriceRefs.current[i]?.focus();}}} className="w-20 p-1 text-center border rounded bg-white dark:bg-gray-700" /></td>
+                                <td className="p-2"><input ref={(el) => (purPriceRefs.current[i] = el)} type="number" value={autoCalcPrice} onChange={(e) => updateRow(i, { purchaseRate: e.target.value })} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();batchRefs.current[i]?.focus();}}} className="w-24 p-1 text-right border rounded bg-white dark:bg-gray-700" placeholder="Auto" /></td>
+                                <td className="p-2"><input ref={(el) => (batchRefs.current[i] = el)} value={r.batch} onChange={(e) => updateRow(i, { batch: e.target.value })} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();bonusRefs.current[i]?.focus();}}} className="w-28 p-1 border rounded bg-white dark:bg-gray-700" /></td>
+                                <td className="p-2"><input ref={(el) => (bonusRefs.current[i] = el)} type="number" value={r.bonusQty} onChange={(e) => updateRow(i, { bonusQty: e.target.value })} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();expiryRefs.current[i]?.focus();}}} className="w-20 p-1 text-center border rounded bg-white dark:bg-gray-700" /></td>
+                                <td className="p-2"><input ref={(el) => (expiryRefs.current[i] = el)} type="date" value={r.expiry} onChange={(e) => updateRow(i, { expiry: e.target.value })} onKeyDown={(e)=>{if(e.key==='Enter'){e.preventDefault();if(i===medicines.length-1){setMedicines(p=>[...p,emptyRow()]);setTimeout(()=>productNameRefs.current[i+1]?.focus(),50)}else{productNameRefs.current[i+1]?.focus()}}}} className="w-36 p-1 border rounded bg-white dark:bg-gray-700" /></td>
+                                <td className="p-2 text-right font-semibold">{t.finalAmt.toFixed(2)}</td>
+                                <td className="p-2 text-center">{medicines.length > 1 && (<button onClick={() => removeRow(i)} className="text-red-500 hover:text-red-700">✕</button>)}</td>
+                            </tr>
+                        );
+                        })}
+                    </tbody>
+                    </table>
+                </div>
+                <div className="p-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-600">
+                    <div className="flex justify-end items-center">
+                        <div className="text-lg font-bold text-gray-800 dark:text-white">
+                            Total: <span className="ml-4 text-2xl">Rs. {medicines.reduce((s, r) => s + getTotals(r).finalAmt, 0).toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
+                </>
+            )}
+            <div className="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+                <button className="px-6 py-3 bg-green-600 text-white border border-green-700 rounded-md text-lg hover:bg-green-700 font-semibold" onClick={handleSubmit}>Save Purchase</button>
             </div>
-            
-            {/* Action Buttons */}
-            <div className="text-center">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Choose Action</h3>
-              <div className="space-y-3">
-                <button
-                  type="button"
-                  onClick={() => savePurchase(false)}
-                  className="w-full px-6 py-3 bg-green-600 text-white rounded hover:bg-green-700 font-semibold text-lg"
-                >
-                  💾 Save Only
-                </button>
-                
-                <button
-                  type="button"
-                  onClick={() => savePurchase(true)}
-                  className="w-full px-6 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold text-lg"
-                >
-                  🖨️ Save & Print Invoice
-                </button>
-                
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmation(false)}
-                  className="w-full px-6 py-3 bg-gray-600 text-white rounded hover:bg-gray-700 font-semibold text-lg"
-                >
-                  ❌ Cancel
-                </button>
-              </div>
+        </div>
+      </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmation && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-md w-full">
+            <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 text-center">Confirm Purchase</h2>
+            <div className="space-y-3">
+              <button onClick={() => savePurchase(false)} className="w-full px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 font-semibold text-lg">Save Only</button>
+              <button onClick={() => savePurchase(true)} className="w-full px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-semibold text-lg">Save & Print</button>
+              <button onClick={() => setShowConfirmation(false)} className="w-full px-6 py-3 bg-gray-600 text-white rounded-md hover:bg-gray-700 font-semibold text-lg">Cancel</button>
             </div>
           </div>
         </div>
@@ -864,122 +735,47 @@ export default function Purchase({ onBack }) {
 
       {/* Read-Only Invoice Viewer */}
       {showInvoiceViewer && viewingInvoice && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded shadow-lg p-6 max-w-6xl w-full mx-4 max-h-[95vh] overflow-y-auto">
-            {/* Invoice Header */}
-            <div className="border-b-2 border-blue-500 pb-4 mb-6">
-              <div className="text-center mb-4">
-                <h1 className="text-3xl font-bold text-blue-800">📋 PURCHASE INVOICE</h1>
-                <div className="text-lg font-semibold text-gray-600">Invoice #{viewingInvoice.invoice_no}</div>
-              </div>
-              
-              {/* Invoice Details Grid */}
-              <div className="grid grid-cols-3 gap-6 text-sm">
-                <div className="bg-blue-50 p-3 rounded">
-                    <div className="font-semibold text-blue-800 mb-2">📅 Invoice Information</div>
-                    <div><strong>Invoice No:</strong> {viewingInvoice.invoice_no}</div>
-                    <div><strong>Invoice Date:</strong> {viewingInvoice.purchase_date}</div>
-                    <div><strong>Received Date:</strong> {viewingInvoice.receive_date || 'Same as invoice date'}</div>
-                  </div>
-                  
-                  <div className="bg-green-50 p-3 rounded">
-                    <div className="font-semibold text-green-800 mb-2">🏪 Supplier Details</div>
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-blue-700 dark:text-blue-400">Purchase Invoice #{viewingInvoice.invoice_no}</h2>
+                <button onClick={() => {setShowInvoiceViewer(false); setViewingInvoice(null);}} className="text-gray-500 hover:text-gray-800 dark:hover:text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            <div className="p-6 flex-1 overflow-y-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 text-sm">
                     <div><strong>Supplier:</strong> {viewingInvoice.supplier_name || 'N/A'}</div>
-                    <div><strong>Contact:</strong> {viewingInvoice.supplier_phone || 'N/A'}</div>
-                    <div><strong>Address:</strong> {viewingInvoice.supplier_address || 'N/A'}</div>
-                  </div>
-                  
-                  <div className="bg-yellow-50 p-3 rounded">
-                    <div className="font-semibold text-yellow-800 mb-2">💰 Invoice Summary</div>
-                    <div><strong>Total Items:</strong> {viewingInvoice.items?.length || 0}</div>
-                    <div><strong>Grand Total:</strong> ₹{viewingInvoice.total || viewingInvoice.total_amount || 0}</div>
-                  <div><strong>Status:</strong> 
-                    {viewingInvoice.availability_type === 'trial' && <span className="text-blue-600">🧪 Trial Period</span>}
-                    {viewingInvoice.availability_type === 'consignment' && <span className="text-orange-600">📋 Consignment</span>}
-                    {viewingInvoice.availability_type === 'owned' && <span className="text-green-600">✅ Owned</span>}
-                  </div>
-                  {(viewingInvoice.availability_type === 'trial' || viewingInvoice.availability_type === 'consignment') && (
-                    <div className="mt-2 text-sm">
-                      <div><strong>Return Date:</strong> {viewingInvoice.trial_end_date || 'Not set'}</div>
-                      <div><strong>Payment:</strong> 
-                        {viewingInvoice.payment_status === 'pending' && <span className="text-yellow-600">⏳ Pending</span>}
-                        {viewingInvoice.payment_status === 'paid' && <span className="text-green-600">✅ Paid</span>}
-                        {viewingInvoice.payment_status === 'partial' && <span className="text-blue-600">🔄 Partial</span>}
-                        {viewingInvoice.payment_status === 'returned' && <span className="text-gray-600">↩️ Returned</span>}
-                      </div>
-                    </div>
-                  )}
-                  </div>
+                    <div><strong>Invoice Date:</strong> {viewingInvoice.purchase_date}</div>
                 </div>
-              </div>
-              
-              {/* Items Table */}
-              <div className="mb-6">
-                <h3 className="text-xl font-semibold text-gray-800 mb-3">📦 Items Details</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse border border-gray-400 text-xs">
-                    <thead className="bg-gray-200">
-                      <tr>
-                        <th className="border border-gray-400 px-2 py-2 text-left">#</th>
-                        <th className="border border-gray-400 px-2 py-2 text-left">Product Name</th>
-                        <th className="border border-gray-400 px-2 py-2">Batch</th>
-                        <th className="border border-gray-400 px-2 py-2">Expiry</th>
-                        <th className="border border-gray-400 px-2 py-2">Packs</th>
-                        <th className="border border-gray-400 px-2 py-2">Bonus</th>
-                        <th className="border border-gray-400 px-2 py-2">Pack Size</th>
-                        <th className="border border-gray-400 px-2 py-2">Sale Price</th>
-                        <th className="border border-gray-400 px-2 py-2">Disc 1%</th>
-                        <th className="border border-gray-400 px-2 py-2">Disc 2%</th>
-                        <th className="border border-gray-400 px-2 py-2">GST%</th>
-                        <th className="border border-gray-400 px-2 py-2">Purchase Price</th>
-                        <th className="border border-gray-400 px-2 py-2">Line Total</th>
-                      </tr>
+                <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                    <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                        <tr>
+                            <th scope="col" className="py-3 px-6">Product</th>
+                            <th scope="col" className="py-3 px-6">Qty</th>
+                            <th scope="col" className="py-3 px-6">Price</th>
+                            <th scope="col" className="py-3 px-6">Total</th>
+                        </tr>
                     </thead>
                     <tbody>
-                      {viewingInvoice.items.map((item, i) => (
-                        <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                          <td className="border border-gray-400 px-2 py-1 text-center">{i + 1}</td>
-                          <td className="border border-gray-400 px-2 py-1">{item.product_name}</td>
-                          <td className="border border-gray-400 px-2 py-1 text-center">{item.batch_no || '-'}</td>
-                          <td className="border border-gray-400 px-2 py-1 text-center">{item.expiry || '-'}</td>
-                          <td className="border border-gray-400 px-2 py-1 text-center">{item.qty}</td>
-                          <td className="border border-gray-400 px-2 py-1 text-center">{item.bonus_qty || '-'}</td>
-                          <td className="border border-gray-400 px-2 py-1 text-center">{item.pack_size || 1}</td>
-                          <td className="border border-gray-400 px-2 py-1 text-right">₹{item.original_sale_price || '-'}</td>
-                          <td className="border border-gray-400 px-2 py-1 text-center">{item.discount1_percent || 0}%</td>
-                          <td className="border border-gray-400 px-2 py-1 text-center">{item.discount2_percent || 0}%</td>
-                          <td className="border border-gray-400 px-2 py-1 text-center">{item.gst_percent || 0}%</td>
-                          <td className="border border-gray-400 px-2 py-1 text-right">₹{Number(item.unit_price || 0).toFixed(2)}</td>
-                          <td className="border border-gray-400 px-2 py-1 text-right">₹{Number(item.qty * item.unit_price || 0).toFixed(2)}</td>
-                        </tr>
-                      ))}
-                      <tr className="bg-blue-100 font-bold">
-                        <td colSpan="12" className="border border-gray-400 px-2 py-2 text-right">GRAND TOTAL:</td>
-                        <td className="border border-gray-400 px-2 py-2 text-right">₹{viewingInvoice.items.reduce((sum, item) => sum + (item.qty * item.unit_price), 0).toFixed(2)}</td>
-                      </tr>
+                        {viewingInvoice.items.map((item, i) => (
+                            <tr key={i} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+                                <th scope="row" className="py-4 px-6 font-medium text-gray-900 whitespace-nowrap dark:text-white">{item.product_name}</th>
+                                <td className="py-4 px-6">{item.qty}</td>
+                                <td className="py-4 px-6">Rs. {Number(item.unit_price || 0).toFixed(2)}</td>
+                                <td className="py-4 px-6">Rs. {Number(item.qty * item.unit_price || 0).toFixed(2)}</td>
+                            </tr>
+                        ))}
                     </tbody>
-                  </table>
-                </div>
-              </div>
-              
-              {/* Action Buttons */}
-              <div className="flex justify-center gap-4 pt-4 border-t">
-                <button
-                  onClick={() => reprintInvoice(viewingInvoice)}
-                  className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold"
-                >
-                  🖨️ Print Invoice
-                </button>
-                <button
-                  onClick={() => {setShowInvoiceViewer(false); setViewingInvoice(null);}}
-                  className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold"
-                >
-                  ❌ Close
-                </button>
-              </div>
+                </table>
+            </div>
+            <div className="p-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-600 flex justify-between items-center">
+                <div className="text-lg font-bold">Grand Total: Rs. {viewingInvoice.items.reduce((sum, item) => sum + (item.qty * item.unit_price), 0).toFixed(2)}</div>
+                <button onClick={() => reprintInvoice(viewingInvoice)} className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">Print</button>
             </div>
           </div>
-        )}
+        </div>
+      )}
     </div>
   );
 }

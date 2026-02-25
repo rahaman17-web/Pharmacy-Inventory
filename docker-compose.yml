@@ -5,9 +5,9 @@ services:
     image: postgres:15-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: pharmacy_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "@sarahkhan17"
+      POSTGRES_DB: pharmacy
     volumes:
       - db_data:/var/lib/postgresql/data
     ports:
@@ -21,11 +21,13 @@ services:
     depends_on:
       - db
     ports:
-      - "4000:4000"
+      - "5000:4002"
     env_file:
       - ./Backend/.env
     environment:
-      PORT: 4000
+      # Use the existing DB credentials (do not reinitialize volume)
+      DATABASE_URL: "postgres://user:password@db:5432/pharmacy_db"
+      PORT: 4002
       NODE_ENV: production
     command: sh -c "npm run migrate && npm run seed && npm start"
 

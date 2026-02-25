@@ -43,14 +43,14 @@ export default function ReprintInvoice({ onBack }) {
   };
 
   return (
-    <div className="min-h-screen p-6 bg-gray-100">
+    <div className="min-h-screen p-4 sm:p-6 bg-gray-100">
       <div className="max-w-3xl mx-auto">
         <div className="bg-white rounded-lg shadow-xl overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 px-10 py-8 text-white">
-            <div className="flex justify-between items-start">
+          <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 px-4 sm:px-10 py-6 sm:py-8 text-white">
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
               <div>
-                <h1 className="text-4xl font-black tracking-tight">🔍 REPRINT INVOICE</h1>
+                <h1 className="text-2xl sm:text-4xl font-black tracking-tight">🔍 REPRINT INVOICE</h1>
                 <p className="text-indigo-100 text-sm mt-2">Search and reprint past invoices</p>
               </div>
               <button
@@ -63,12 +63,12 @@ export default function ReprintInvoice({ onBack }) {
           </div>
 
           {/* Search Section */}
-          <div className="px-10 py-8">
+          <div className="px-4 sm:px-10 py-6 sm:py-8">
             <div className="mb-6">
               <label className="block text-sm font-bold text-gray-700 mb-2">
                 Invoice Number
               </label>
-              <div className="flex gap-4">
+              <div className="flex flex-col sm:flex-row gap-4">
                 <input
                   type="text"
                   value={invoiceNo}
