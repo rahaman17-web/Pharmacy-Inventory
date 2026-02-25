@@ -296,6 +296,12 @@ const AutoComplete = forwardRef(function AutoComplete({ value, onSelect, onEnter
                       </li>
                     )}
 
+                    {!allowCreate && getQueryStr() && getQueryStr().trim() !== "" && suggestions.length === 0 && (
+                      <li className="p-3 text-center text-orange-600 bg-orange-50">
+                        ⚠️ Product not found. Please add it from <strong>Products</strong> first.
+                      </li>
+                    )}
+
                     {suggestions.length === 0 && (!getQueryStr() || getQueryStr().trim() === "") && !allItems && (
                       <li className="p-3 text-gray-400 text-center">Start typing to search...</li>
                     )}
@@ -357,6 +363,12 @@ const AutoComplete = forwardRef(function AutoComplete({ value, onSelect, onEnter
                             </svg>
                             Create new: "{getQueryStr()}"
                           </div>
+                        </li>
+                      )}
+
+                      {!allowCreate && getQueryStr() && getQueryStr().trim() !== "" && suggestions.length === 0 && (
+                        <li className="p-3 text-center text-orange-600 bg-orange-50">
+                          ⚠️ Product not found. Please add it from <strong>Products</strong> first.
                         </li>
                       )}
 

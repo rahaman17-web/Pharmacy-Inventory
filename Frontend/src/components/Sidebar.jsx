@@ -6,20 +6,29 @@ const NavItem = ({ to, icon: Icon, children, end = true, collapsed }) => (
     to={to}
     end={end}
     title={collapsed ? children : undefined}
-    className={({ isActive }) =>
-      `flex items-center rounded-lg transition-colors duration-200 group relative
-       ${collapsed ? 'justify-center px-0 py-3.5 mx-2' : 'px-4 py-3'}
-       ${isActive
-         ? 'bg-blue-100 dark:bg-gray-700 text-blue-600 dark:text-white font-semibold'
-         : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-       }`
-    }
   >
-    <Icon className={`flex-shrink-0 ${collapsed ? 'h-8 w-8' : 'h-7 w-7 mr-3'}`} />
-    {!collapsed && <span className="font-medium text-base">{children}</span>}
-    {collapsed && (
-      <span className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-50 transition-opacity">
-        {children}
+    {({ isActive }) => (
+      <span className={`flex items-center rounded-lg transition-colors duration-200 group relative
+        ${collapsed ? 'justify-center px-0 py-2 mx-2' : 'px-4 py-3'}
+        ${isActive
+          ? 'bg-blue-100 dark:bg-gray-700 text-blue-600 dark:text-white font-semibold'
+          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+        }`}
+      >
+        {collapsed ? (
+          <span className={`flex items-center justify-center w-11 h-11 rounded-xl transition-colors
+            ${isActive ? 'bg-blue-200 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-800 group-hover:bg-blue-100 dark:group-hover:bg-gray-700'}`}>
+            <Icon className="h-6 w-6 flex-shrink-0" />
+          </span>
+        ) : (
+          <Icon className="h-7 w-7 flex-shrink-0 mr-3" />
+        )}
+        {!collapsed && <span className="font-medium text-base">{children}</span>}
+        {collapsed && (
+          <span className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-50 transition-opacity">
+            {children}
+          </span>
+        )}
       </span>
     )}
   </NavLink>
@@ -76,14 +85,15 @@ export default function Sidebar({ user, onLogout, collapsed, onToggle }) {
         {!collapsed && <p className="px-4 pt-1 pb-1 text-xs text-gray-400 uppercase tracking-wider">Reports</p>}
 
         <NavItem to="/stock"        icon={DocumentChartBarIcon} collapsed={collapsed}>Stock Report</NavItem>
-        <NavItem to="/sales-report" icon={DocumentChartBarIcon} collapsed={collapsed}>Sales Report</NavItem>
         <NavItem to="/user-sales"   icon={DocumentChartBarIcon} collapsed={collapsed}>My Sales History</NavItem>
 
         {(userIsAdmin || userIsManager) && (
           <>
             <div className="my-1 border-t border-gray-200 dark:border-gray-700 mx-2" />
             {!collapsed && <p className="px-4 pt-1 pb-1 text-xs text-gray-400 uppercase tracking-wider">Management</p>}
-            <NavItem to="/expenses" icon={CurrencyDollarIcon} collapsed={collapsed}>Expenses</NavItem>
+            <NavItem to="/sales-report" icon={DocumentChartBarIcon} collapsed={collapsed}>Sales Report</NavItem>
+            <NavItem to="/expenses"     icon={CurrencyDollarIcon}    collapsed={collapsed}>Expenses</NavItem>
+            <NavItem to="/products"     icon={ArchiveBoxIcon}         collapsed={collapsed}>Products</NavItem>
           </>
         )}
 
