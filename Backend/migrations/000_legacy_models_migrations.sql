@@ -1,12 +1,13 @@
--- Basic schema for pharmacy inventory
+-- Legacy migrations backup (moved from src/models/migrations.sql)
+-- Keep as reference; not executed by default if ordering is used (it's 000_ so will run first if present)
+
+-- Basic schema for pharmacy inventory (legacy)
 
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   username TEXT UNIQUE NOT NULL,
   password TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'user',
-  -- CNIC fields: `cnic` is the national ID number, `cnic_name` is the name printed on CNIC,
-  -- `cnic_last3` stores the last 3 digits (used as default password) and is unique per requirement
   cnic TEXT UNIQUE,
   cnic_name TEXT,
   cnic_last3 TEXT UNIQUE,
@@ -67,7 +68,6 @@ CREATE TABLE IF NOT EXISTS purchase_items (
   bonus_qty INTEGER DEFAULT 0,
   unit_price NUMERIC(12,2),
   line_total NUMERIC(12,2) DEFAULT 0,
-  -- Store original input values for complete history
   original_sale_price NUMERIC(12,2),
   discount1_percent NUMERIC(5,2) DEFAULT 0,
   discount2_percent NUMERIC(5,2) DEFAULT 0,
@@ -132,5 +132,4 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Add supplier_id to products (safe to run multiple times)
 ALTER TABLE products ADD COLUMN IF NOT EXISTS supplier_id INTEGER REFERENCES suppliers(id) ON DELETE SET NULL;

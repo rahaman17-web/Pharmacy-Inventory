@@ -10,7 +10,7 @@
     "dev": "node src/index.js",
     "start:dev": "node src/index.js",
     "migrate": "node src/migrate.js",
-    "seed": "node src/seed.js",
+    "seed": "node seeds/seed.js",
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand"
   },
   "dependencies": {
