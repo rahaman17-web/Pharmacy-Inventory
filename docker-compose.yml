@@ -26,10 +26,11 @@ services:
       - ./Backend/.env
     environment:
       # Use the existing DB credentials (do not reinitialize volume)
-      DATABASE_URL: "postgres://user:password@db:5432/pharmacy_db"
+      DATABASE_URL: "postgresql://postgres:%40sarahkhan17@db:5432/pharmacy"
       PORT: 4002
       NODE_ENV: production
-    command: sh -c "npm run migrate && npm run seed && npm start"
+    # Seeds are NOT run automatically — run manually once: docker compose exec backend npm run seed
+    command: sh -c "npm run migrate && npm start"
 
   frontend:
     build:
