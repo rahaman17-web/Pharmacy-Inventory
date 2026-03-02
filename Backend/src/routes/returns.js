@@ -221,6 +221,99 @@ router.post(
   }
 );
 
+// Make sale_id / sale_item_id / batch_id nullable for manual returns (idempotent)
+async function ensureManualReturnsSchema() {
+  await db.query(`ALTER TABLE returns ALTER COLUMN sale_id DROP NOT NULL`).catch(() => {});
+  await db.query(`ALTER TABLE return_items ALTER COLUMN sale_item_id DROP NOT NULL`).catch(() => {});
+  await db.query(`ALTER TABLE return_items ALTER COLUMN batch_id DROP NOT NULL`).catch(() => {});
+}
+ensureManualReturnsSchema().catch(() => {});
+
+// GET /returns/search-products?q= — search products with live batch stock for manual returns
+router.get("/search-products", requireAuth, async (req, res, next) => {
+  const q = String(req.query.q || "").trim();
+  if (!q) return res.json([]);
+  try {
+    const { rows } = await db.query(`
+      SELECT p.id, p.name, p.formula, p.category,
+             b.id AS batch_id, b.batch_no, b.expiry, b.qty AS stock_qty,
+             b.cost, p.selling_price
+      FROM products p
+      JOIN batches b ON b.product_id = p.id
+      WHERE b.qty > 0
+        AND (p.name ILIKE $1 OR p.formula ILIKE $1)
+      ORDER BY p.name, b.expiry NULLS LAST
+      LIMIT 40
+    `, [`%${q}%`]);
+    res.json(rows);
+  } catch (err) { next(err); }
+});
+
+// POST /returns/manual — manual return without an invoice
+// Body: { items: [{ product_id, batch_id?, qty, unit_price, reason? }], reason, return_date? }
+router.post("/manual", requireAuth, async (req, res, next) => {
+  const role = req.user?.role;
+  if (!role || !["admin", "manager", "cashier"].includes(role))
+    return res.status(403).json({ error: "Insufficient role" });
+
+  const { items = [], reason = "", return_date } = req.body;
+  if (!Array.isArray(items) || items.length === 0)
+    return res.status(400).json({ error: "At least one item is required" });
+  for (const it of items) {
+    if (!it.product_id) return res.status(400).json({ error: "product_id required for each item" });
+    if (!it.qty || Number(it.qty) < 1) return res.status(400).json({ error: "qty must be >= 1 for each item" });
+    if (it.unit_price === undefined || Number(it.unit_price) < 0) return res.status(400).json({ error: "unit_price must be >= 0" });
+  }
+
+  const userId = req.user?.id || null;
+  const client = await db.getClient();
+  try {
+    const total = items.reduce((s, it) => s + Number(it.qty) * Number(it.unit_price), 0);
+
+    // Insert return header — sale_id is NULL for manual returns
+    const { rows: [ret] } = await client.query(
+      `INSERT INTO returns (sale_id, user_id, total, reason, created_at)
+       VALUES (NULL, $1, $2, $3, $4) RETURNING id`,
+      [userId, total, reason || null, return_date ? new Date(return_date) : new Date()]
+    );
+
+    for (const it of items) {
+      const qty = Number(it.qty);
+      const unitPrice = Number(it.unit_price);
+      const batchId = it.batch_id ? Number(it.batch_id) : null;
+      let unitCost = 0;
+      if (batchId) {
+        const { rows } = await client.query(`SELECT cost FROM batches WHERE id = $1`, [batchId]);
+        unitCost = Number(rows[0]?.cost || 0);
+      }
+
+      await client.query(
+        `INSERT INTO return_items (return_id, sale_item_id, product_id, batch_id, qty, unit_price, unit_cost)
+         VALUES ($1, NULL, $2, $3, $4, $5, $6)`,
+        [ret.id, Number(it.product_id), batchId, qty, unitPrice, unitCost]
+      );
+
+      // Restore stock to original batch if known
+      if (batchId) {
+        await client.query(`UPDATE batches SET qty = qty + $1 WHERE id = $2`, [qty, batchId]);
+      }
+    }
+
+    await logAudit({
+      user_id: userId,
+      action: "return.manual",
+      details: { return_id: ret.id, total, items_count: items.length, reason }
+    }).catch(() => {});
+
+    res.status(201).json({ ok: true, return_id: ret.id, total, message: "Manual return processed successfully." });
+  } catch (err) {
+    console.error("Manual return error:", err);
+    res.status(500).json({ error: err.message || "Failed to process manual return" });
+  } finally {
+    client.release?.();
+  }
+});
+
 // GET all returns
 router.get("/", requireAuth, async (req, res, next) => {
   try {

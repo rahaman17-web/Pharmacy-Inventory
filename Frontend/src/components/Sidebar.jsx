@@ -77,7 +77,8 @@ export default function Sidebar({ user, onLogout, collapsed, onToggle }) {
 
         <NavItem to="/sale"     icon={ShoppingCartIcon}      collapsed={collapsed}>Sale Invoice</NavItem>
         <NavItem to="/purchase" icon={ArchiveBoxIcon}        collapsed={collapsed}>Purchase Stock</NavItem>
-        <NavItem to="/returns"  icon={ArrowUturnLeftIcon}    collapsed={collapsed}>Returns &amp; Refunds</NavItem>
+        <NavItem to="/returns"         icon={ArrowUturnLeftIcon}    collapsed={collapsed}>Returns &amp; Refunds</NavItem>
+        <NavItem to="/supplier-return"  icon={ArrowUturnLeftIcon}    collapsed={collapsed}>Return to Supplier</NavItem>
         <NavItem to="/reprint"  icon={DocumentDuplicateIcon} collapsed={collapsed}>Reprint Invoice</NavItem>
 
         <div className="my-1 border-t border-gray-200 dark:border-gray-700 mx-2" />
