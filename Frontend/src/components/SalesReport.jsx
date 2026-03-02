@@ -10,6 +10,7 @@ export default function SalesReport({ onBack }) {
 	const [rows, setRows] = useState([]);
 	const [summary, setSummary] = useState(null);
 	const [loading, setLoading] = useState(false);
+	const [groupBy, setGroupBy] = useState("day"); // day | month
 	const [from, setFrom] = useState(() => {
 		const now = new Date();
 		const d = new Date(now);
@@ -71,6 +72,23 @@ export default function SalesReport({ onBack }) {
 		};
 	}, [summary, totals]);
 
+	// Group rows by day or month
+	const grouped = useMemo(() => {
+		const map = {};
+		rows.forEach((r) => {
+			const d = new Date(r.created_at);
+			const key = groupBy === "month"
+				? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+				: toIsoDateString(d);
+			if (!map[key]) map[key] = { key, invoices: 0, gross: 0, discount: 0, net: 0 };
+			map[key].invoices += 1;
+			map[key].gross += Number(r.total || 0);
+			map[key].discount += Number(r.discount || 0);
+			map[key].net += Number(r.net_total || 0);
+		});
+		return Object.values(map).sort((a, b) => a.key < b.key ? 1 : -1);
+	}, [rows, groupBy]);
+
 	return (
 		<div className="p-2 sm:p-4 lg:p-6 bg-gray-100 min-h-screen">
 			<div>
@@ -80,12 +98,9 @@ export default function SalesReport({ onBack }) {
 						<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
 							<div>
 								<h1 className="text-3xl sm:text-4xl font-black tracking-tight">📊 SALES REPORT</h1>
-								<p className="text-teal-100 text-sm mt-1">Comprehensive sales and profit analysis</p>
+								<p className="text-teal-100 text-sm mt-1">Business summary — daily / monthly analysis</p>
 							</div>
-							<button
-								onClick={onBack}
-								className="px-5 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-semibold transition text-sm sm:text-base"
-							>
+							<button onClick={onBack} className="px-5 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-semibold transition text-sm sm:text-base">
 								← Back
 							</button>
 						</div>
@@ -93,30 +108,27 @@ export default function SalesReport({ onBack }) {
 
 					{/* Filters */}
 					<div className="p-6 bg-gray-50 border-b border-gray-200">
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+						<div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
 							<div>
 								<label className="block text-sm font-semibold text-gray-700 mb-1">From</label>
-								<input
-									type="date"
-									value={from}
-									onChange={(e) => setFrom(e.target.value)}
-									className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-								/>
+								<input type="date" value={from} onChange={(e) => setFrom(e.target.value)}
+									className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
 							</div>
 							<div>
 								<label className="block text-sm font-semibold text-gray-700 mb-1">To</label>
-								<input
-									type="date"
-									value={to}
-									onChange={(e) => setTo(e.target.value)}
-									className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-								/>
+								<input type="date" value={to} onChange={(e) => setTo(e.target.value)}
+									className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
 							</div>
-							<button
-								onClick={load}
-								className="w-full md:w-auto px-6 py-2 bg-teal-500 text-white rounded-lg font-semibold hover:bg-teal-600 transition shadow"
-								disabled={loading}
-							>
+							<div>
+								<label className="block text-sm font-semibold text-gray-700 mb-1">Group By</label>
+								<select value={groupBy} onChange={(e) => setGroupBy(e.target.value)}
+									className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
+									<option value="day">Daily</option>
+									<option value="month">Monthly</option>
+								</select>
+							</div>
+							<button onClick={load} disabled={loading}
+								className="w-full px-6 py-2 bg-teal-500 text-white rounded-lg font-semibold hover:bg-teal-600 transition shadow disabled:opacity-50">
 								{loading ? "Loading..." : "Load Report"}
 							</button>
 						</div>
@@ -145,35 +157,32 @@ export default function SalesReport({ onBack }) {
 								)}
 							</div>
 
-							{/* Table */}
-							<div className="overflow-x-auto">
-								{rows.length === 0 ? (
-									<div className="text-center py-20 px-6">
-										<p className="text-gray-500">No sales data found for the selected period.</p>
-									</div>
+							{/* Grouped breakdown table */}
+							<div className="overflow-x-auto px-6 pb-6">
+								<h2 className="text-sm font-bold text-gray-600 uppercase tracking-wide mb-3">
+									{groupBy === "month" ? "Monthly" : "Daily"} Breakdown
+								</h2>
+								{grouped.length === 0 ? (
+									<p className="text-gray-400 text-sm py-6 text-center">No sales data found for the selected period.</p>
 								) : (
-									<table className="min-w-full divide-y divide-gray-200">
+									<table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg overflow-hidden">
 										<thead className="bg-gray-100">
 											<tr>
-												<th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Invoice</th>
-												<th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Date</th>
-												<th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">User</th>
-												<th className="px-6 py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">Total</th>
-												<th className="px-6 py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">Discount</th>
-												<th className="px-6 py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">Net</th>
+												<th className="px-5 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">{groupBy === "month" ? "Month" : "Date"}</th>
+												<th className="px-5 py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">Invoices</th>
+												<th className="px-5 py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">Gross</th>
+												<th className="px-5 py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">Discount</th>
+												<th className="px-5 py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">Net</th>
 											</tr>
 										</thead>
 										<tbody className="bg-white divide-y divide-gray-200">
-											{rows.map((r) => (
-												<tr key={r.id} className="hover:bg-gray-50">
-													<td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">#{r.id}</td>
-													<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-														{new Date(r.created_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}
-													</td>
-													<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{r.username || r.user_id}</td>
-													<td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-800">Rs. {Number(r.total || 0).toFixed(2)}</td>
-													<td className="px-6 py-4 whitespace-nowrap text-right text-sm text-red-600">Rs. {Number(r.discount || 0).toFixed(2)}</td>
-													<td className="px-6 py-4 whitespace-nowrap text-right font-semibold text-gray-900">Rs. {Number(r.net_total || 0).toFixed(2)}</td>
+											{grouped.map((g) => (
+												<tr key={g.key} className="hover:bg-gray-50">
+													<td className="px-5 py-3 whitespace-nowrap font-semibold text-gray-800">{g.key}</td>
+													<td className="px-5 py-3 whitespace-nowrap text-right text-gray-600">{g.invoices}</td>
+													<td className="px-5 py-3 whitespace-nowrap text-right text-gray-700">Rs. {g.gross.toFixed(2)}</td>
+													<td className="px-5 py-3 whitespace-nowrap text-right text-red-500">Rs. {g.discount.toFixed(2)}</td>
+													<td className="px-5 py-3 whitespace-nowrap text-right font-bold text-gray-900">Rs. {g.net.toFixed(2)}</td>
 												</tr>
 											))}
 										</tbody>

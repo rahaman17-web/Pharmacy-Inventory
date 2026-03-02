@@ -1,8 +1,8 @@
-import { useState, forwardRef, useEffect, useRef } from "react";
+import { useState, forwardRef, useEffect, useRef, useImperativeHandle } from "react";
 import { createPortal } from "react-dom";
 import api from "../api";
 
-const AutoComplete = forwardRef(function AutoComplete({ value, onSelect, onEnter, placeholder, allItems, fullScreenList = false, allowCreate = true }, ref) {
+const AutoComplete = forwardRef(function AutoComplete({ value, onSelect, onEnter, placeholder, allItems, supplierId = null, fullScreenList = false, allowCreate = true, inputStyle, inputClassName, stockData = {} }, ref) {
   const [query, setQuery] = useState((value && value.name) || value || "");
   const [showList, setShowList] = useState(false);
   // Only lock when a proper selected object with an id is provided
@@ -16,13 +16,37 @@ const AutoComplete = forwardRef(function AutoComplete({ value, onSelect, onEnter
   const listItemRefs = useRef([]);
   const [portalStyle, setPortalStyle] = useState(null);
 
-  // set both forwarded ref and local inputRef
-  const setRefs = (el) => {
-    inputRef.current = el;
-    if (!ref) return;
-    if (typeof ref === 'function') ref(el);
-    else ref.current = el;
-  };
+  // Only set local ref; forwarded ref is handled by useImperativeHandle below
+  const setRefs = (el) => { inputRef.current = el; };
+
+  useImperativeHandle(ref, () => ({
+    focus: () => inputRef.current?.focus(),
+    closeDropdown: () => setShowList(false),
+    openDropdown: () => {
+      setQuery('');
+      setLocked(false);
+      setSuggestions(allItems || []);
+      setSelectedIndex(0);
+      setShowList(true);
+      if (inputRef.current) {
+        const rect = inputRef.current.getBoundingClientRect();
+        setPortalStyle({ top: rect.bottom, left: rect.left, width: rect.width });
+      }
+      setTimeout(() => inputRef.current?.focus(), 0);
+    },
+    reset: () => {
+      setQuery('');
+      setLocked(false);
+      setSuggestions(allItems || []);
+      setSelectedIndex(0);
+      setShowList(true);
+      if (inputRef.current) {
+        const rect = inputRef.current.getBoundingClientRect();
+        setPortalStyle({ top: rect.bottom, left: rect.left, width: rect.width });
+      }
+      setTimeout(() => inputRef.current?.focus(), 0);
+    },
+  }), [allItems]);
 
   useEffect(() => {
     setQuery((value && value.name) || value || "");
@@ -51,8 +75,19 @@ const AutoComplete = forwardRef(function AutoComplete({ value, onSelect, onEnter
 
   // Initialize suggestions with allItems when component mounts
   useEffect(() => {
-    if (allItems && allItems.length > 0 && !locked) {
-      setSuggestions(allItems);
+    if (locked) return;
+    if (allItems && allItems.length > 0) {
+      const qStr = getQueryStr();
+      if (!qStr || qStr.trim() === '') {
+        setSuggestions(allItems);
+      } else {
+        const filtered = allItems.filter(item =>
+          item.name.toLowerCase().includes(qStr.toLowerCase()) ||
+          (item.formula && item.formula.toLowerCase().includes(qStr.toLowerCase())) ||
+          (item.category && item.category.toLowerCase().includes(qStr.toLowerCase()))
+        );
+        setSuggestions(filtered.length > 0 ? filtered : []);
+      }
     }
   }, [allItems]);
 
@@ -67,7 +102,7 @@ const AutoComplete = forwardRef(function AutoComplete({ value, onSelect, onEnter
     return '';
   };
 
-  // Fetch suggestions when query changes (debounced)
+  // Fetch suggestions when query or supplierId changes (debounced)
   useEffect(() => {
     if (locked) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -87,9 +122,23 @@ const AutoComplete = forwardRef(function AutoComplete({ value, onSelect, onEnter
             (item.sku && item.sku.toLowerCase().includes(qStr.toLowerCase())) ||
             (item.category && item.category.toLowerCase().includes(qStr.toLowerCase()))
           );
-          setSuggestions(filtered);
+          if (filtered.length > 0) {
+            setSuggestions(filtered);
+          } else if (!supplierId) {
+            // Only fall back to full API when NO supplier is restricted
+            const { data } = await api.get(`/products?q=${encodeURIComponent(qStr)}`);
+            setSuggestions(data || []);
+          } else {
+            // Supplier is selected but no local match — search API scoped to that supplier
+            const { data } = await api.get(`/products?q=${encodeURIComponent(qStr)}&supplier_id=${supplierId}`);
+            setSuggestions(data || []);
+          }
+        } else if (supplierId) {
+          // No allItems yet but supplier selected — search API scoped to supplier
+          const { data } = await api.get(`/products?q=${encodeURIComponent(qStr)}&supplier_id=${supplierId}`);
+          setSuggestions(data || []);
         } else {
-          const { data } = await api.get(`/products?q=${encodeURIComponent(query)}`);
+          const { data } = await api.get(`/products?q=${encodeURIComponent(qStr)}`);
           setSuggestions(data || []);
         }
       } catch (err) {
@@ -98,7 +147,7 @@ const AutoComplete = forwardRef(function AutoComplete({ value, onSelect, onEnter
       }
     }, 250);
     return () => clearTimeout(debounceRef.current);
-  }, [query, locked, allItems]);
+  }, [query, locked, allItems, supplierId]);
 
   const handleSelect = (item) => {
     // item may be a product object from API or a string
@@ -132,7 +181,8 @@ const AutoComplete = forwardRef(function AutoComplete({ value, onSelect, onEnter
         ref={setRefs}
         type="text"
         value={typeof query === 'object' ? (query.name || '') : query}
-        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        className={inputClassName || "w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"}
+        style={inputStyle}
         placeholder={placeholder || "Type to search..."}
         onChange={(e) => {
           const newVal = e.target.value;
@@ -153,41 +203,48 @@ const AutoComplete = forwardRef(function AutoComplete({ value, onSelect, onEnter
             setShowList(false);
             return;
           }
-          if (e.key === "ArrowDown" && !showList) {
+          if (e.key === "ArrowDown") {
             e.preventDefault();
-            setShowList(true);
-            // If no query, show all items
-            const qStr = getQueryStr();
-            if ((!qStr || qStr.trim() === "") && allItems && allItems.length > 0) {
-              setSuggestions(allItems);
+            if (!showList) {
+              setShowList(true);
+              const qStr = getQueryStr();
+              if ((!qStr || qStr.trim() === "") && allItems && allItems.length > 0) setSuggestions(allItems);
+            } else {
+              const newIndex = selectedIndex < suggestions.length - 1 ? selectedIndex + 1 : 0;
+              setSelectedIndex(newIndex);
+              listItemRefs.current[newIndex]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+            return;
+          }
+          if (e.key === "ArrowUp") {
+            e.preventDefault();
+            if (showList) {
+              const newIndex = selectedIndex > 0 ? selectedIndex - 1 : suggestions.length - 1;
+              setSelectedIndex(newIndex);
+              listItemRefs.current[newIndex]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
             }
             return;
           }
           if (e.key === "Enter") {
             e.preventDefault();
             if (showList && suggestions.length > 0) {
-              // Dropdown is open, select first item
-              const selected = suggestions[0];
-              handleSelect(selected);
+              handleSelect(suggestions[selectedIndex]);
             } else if (!showList) {
-              // Dropdown is closed, open it
               setShowList(true);
               const qStr = getQueryStr();
-              if ((!qStr || qStr.trim() === "") && allItems && allItems.length > 0) {
-                setSuggestions(allItems);
-              }
+              if ((!qStr || qStr.trim() === "") && allItems && allItems.length > 0) setSuggestions(allItems);
             }
           }
         }}
         onFocus={() => {
-          // Position portal but don't auto-open
           if (inputRef.current) {
             const rect = inputRef.current.getBoundingClientRect();
             setPortalStyle({ top: rect.bottom, left: rect.left, width: rect.width });
           }
         }}
         onClick={() => {
-          if (!locked) {
+          // fullScreenList mode: only open via Enter key or openDropdown() call, not on click
+          if (!locked && !fullScreenList) {
             setShowList(true);
             // If no query, show all items
             const qStr = getQueryStr();
@@ -202,16 +259,16 @@ const AutoComplete = forwardRef(function AutoComplete({ value, onSelect, onEnter
           ? createPortal(
               <div
                 ref={dropdownRef}
-                className="fixed inset-0 z-[99999] bg-black/30 backdrop-blur-sm flex justify-center pt-10 px-4 overflow-hidden"
+                className="fixed inset-0 z-[99999] bg-black/30 backdrop-blur-sm flex justify-center pt-6 px-2 overflow-hidden"
                 onClick={(e) => {
-                  if (e.target === e.currentTarget) setShowList(false);
+                  if (e.target === e.currentTarget) { setShowList(false); setTimeout(() => inputRef.current?.focus(), 50); }
                 }}
               >
-                <div className="w-full max-w-5xl bg-white border border-gray-200 rounded-2xl shadow-2xl max-h-[70vh] flex flex-col">
+                <div className="w-full max-w-[98vw] bg-white border border-gray-200 rounded-2xl shadow-2xl max-h-[85vh] flex flex-col">
                   <div className="px-4 py-3 border-b bg-gray-50 flex-shrink-0">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-semibold text-gray-700">Select item</span>
-                      <button onClick={() => setShowList(false)} className="text-gray-500 hover:text-gray-800">✕</button>
+                      <span className="text-sm font-semibold text-gray-700">Select Item</span>
+                      <button onClick={() => { setShowList(false); setTimeout(() => inputRef.current?.focus(), 50); }} className="text-gray-500 hover:text-gray-800">✕</button>
                     </div>
                     <input
                       type="text"
@@ -245,71 +302,61 @@ const AutoComplete = forwardRef(function AutoComplete({ value, onSelect, onEnter
                     />
                   </div>
                   <div className="overflow-y-auto flex-1">
-                  <ul>
-                    {suggestions.map((item, index) => (
-                      <li
-                        key={item.id || index}
-                        ref={(el) => (listItemRefs.current[index] = el)}
-                        className={`p-3 cursor-pointer border-b last:border-b-0 transition-colors ${
-                          index === selectedIndex ? 'bg-blue-100 border-l-4 border-l-blue-600' : 'hover:bg-blue-50'
-                        }`}
-                        onClick={() => handleSelect(item)}
-                        onMouseEnter={() => setSelectedIndex(index)}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 pr-4">
-                            <div className="font-semibold text-gray-800 truncate">{item.name}</div>
-                            {(item.formula || item.sku) && <div className="text-xs text-gray-500 mt-1 truncate">{item.formula ? `Formula/SKU: ${item.formula}` : `SKU: ${item.sku}`}</div>}
-                            {item.category && <div className="text-xs text-gray-500 mt-1 truncate">Category: {item.category}</div>}
-                            {item.pack_size > 1 && <div className="text-xs text-purple-600 mt-1 font-medium">Pack: {item.pack_size} units</div>}
-                          </div>
-                          <div className="text-right flex-shrink-0">
-                            <div className="text-xs text-gray-500">Sale Price</div>
-                            <div className="font-semibold text-green-600">{Math.round(Number(item.selling_price ?? item.mrp ?? 0))}</div>
-                            <div className="text-xs text-blue-600 mt-1">Per unit: {Number(item.selling_price ?? item.mrp ?? 0).toFixed(2)}</div>
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-
-                    {allowCreate && getQueryStr() && getQueryStr().trim() !== "" && suggestions.length === 0 && (
-                      <li
-                        className="p-3 bg-green-50 hover:bg-green-100 cursor-pointer text-green-700 font-medium border-t-2 border-green-200 transition-colors"
-                        onClick={async () => {
-                          try {
-                            const api = (await import("../api")).default;
-                            const payload = { name: getQueryStr() };
-                            const { data } = await api.post("/products", payload);
-                            handleSelect(data);
-                          } catch (err) {
-                            console.error("Create product failed", err);
-                            alert(err.response?.data?.error || "Failed to create product");
-                          }
-                        }}
-                      >
-                        <div className="flex items-center">
-                          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                          </svg>
-                          Create new: "{getQueryStr()}"
-                        </div>
-                      </li>
+                  <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+                    <thead style={{ position:"sticky", top:0, zIndex:10 }}>
+                      <tr style={{ background:"#1a1a1a", color:"#fff" }}>
+                        {["PRODUCT NAME","Stock(Pcs)","SP Piece","SP Pack","Manufacturer","Location","Is GST?","Generic Name","P/PC","Stock CTN","Pur Price Pc","PPrice Pack"].map(h=>(
+                          <th key={h} style={{ padding:"5px 8px", textAlign:"left", whiteSpace:"nowrap", fontWeight:700, fontSize:11, borderRight:"1px solid #444" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                    {suggestions.map((item, index) => {
+                      // Use batch-based stock if available, otherwise fall back to the
+                      // product's opening_qty (products entered without a purchase invoice)
+                      const stockPcs = Number(stockData[item.id] ?? item.opening_qty ?? 0);
+                      const packSz = Number(item.pack_size || 1);
+                      const stockCtn = Math.floor(stockPcs / packSz);
+                      const spPiece = Number(item.selling_price || 0);
+                      const spPack = Number(item.pack_sale_price || 0) || (spPiece * packSz);
+                      const purPc = Number(item.purchase_price || 0);
+                      const purPack = purPc * packSz;
+                      const mfr = item.brand || item.supplier_name || item.category || "GENERAL";
+                      const loc = item.shelf || "";
+                      const isGst = Number(item.gst_percentage || 0);
+                      const generic = item.formula || "";
+                      const isSelected = index === selectedIndex;
+                      const rowBg = isSelected ? "#b8d4ff" : index % 2 === 0 ? "#ffffff" : "#f0f0f0";
+                      return (
+                        <tr
+                          key={item.id || index}
+                          ref={(el) => (listItemRefs.current[index] = el)}
+                          style={{ background: rowBg, cursor:"pointer", borderBottom:"1px solid #ddd" }}
+                          onClick={() => handleSelect(item)}
+                          onMouseEnter={() => setSelectedIndex(index)}
+                        >
+                          <td style={{ padding:"3px 8px", fontWeight:600, color:"#111", whiteSpace:"nowrap", maxWidth:280, overflow:"hidden", textOverflow:"ellipsis", borderRight:"1px solid #ddd" }}>{item.name}</td>
+                          <td style={{ padding:"3px 8px", textAlign:"right", fontWeight:700, color: stockPcs > 0 ? "#166534" : "#dc2626", borderRight:"1px solid #ddd" }}>{stockPcs}</td>
+                          <td style={{ padding:"3px 8px", textAlign:"right", color:"#1a1a8c", borderRight:"1px solid #ddd" }}>{spPiece > 0 ? spPiece.toFixed(2) : ""}</td>
+                          <td style={{ padding:"3px 8px", textAlign:"right", color:"#1a1a8c", borderRight:"1px solid #ddd" }}>{spPack > 0 ? spPack.toFixed(2) : ""}</td>
+                          <td style={{ padding:"3px 8px", color:"#333", borderRight:"1px solid #ddd" }}>{mfr}</td>
+                          <td style={{ padding:"3px 8px", color:"#555", borderRight:"1px solid #ddd" }}>{loc}</td>
+                          <td style={{ padding:"3px 8px", textAlign:"center", borderRight:"1px solid #ddd" }}>{isGst > 0 ? <span style={{ color:"#166534", fontWeight:700 }}>{isGst}%</span> : <span style={{ color:"#888" }}>0</span>}</td>
+                          <td style={{ padding:"3px 8px", color:"#555", fontStyle:"italic", borderRight:"1px solid #ddd" }}>{generic}</td>
+                          <td style={{ padding:"3px 8px", textAlign:"center", color:"#333", borderRight:"1px solid #ddd" }}>{packSz}</td>
+                          <td style={{ padding:"3px 8px", textAlign:"right", color: stockCtn > 0 ? "#166534" : "#888", borderRight:"1px solid #ddd" }}>{stockCtn}</td>
+                          <td style={{ padding:"3px 8px", textAlign:"right", color:"#7c2d12", borderRight:"1px solid #ddd" }}>{purPc > 0 ? purPc.toFixed(2) : ""}</td>
+                          <td style={{ padding:"3px 8px", textAlign:"right", color:"#7c2d12" }}>{purPack > 0 ? purPack.toFixed(2) : ""}</td>
+                        </tr>
+                      );
+                    })}
+                    {suggestions.length === 0 && (
+                      <tr><td colSpan={12} style={{ padding:"16px", textAlign:"center", color:"#888" }}>
+                        {getQueryStr() && getQueryStr().trim() !== "" ? "No products found" : "Start typing to search..."}
+                      </td></tr>
                     )}
-
-                    {!allowCreate && getQueryStr() && getQueryStr().trim() !== "" && suggestions.length === 0 && (
-                      <li className="p-3 text-center text-orange-600 bg-orange-50">
-                        ⚠️ Product not found. Please add it from <strong>Products</strong> first.
-                      </li>
-                    )}
-
-                    {suggestions.length === 0 && (!getQueryStr() || getQueryStr().trim() === "") && !allItems && (
-                      <li className="p-3 text-gray-400 text-center">Start typing to search...</li>
-                    )}
-
-                    {suggestions.length === 0 && (!getQueryStr() || getQueryStr().trim() === "") && allItems && allItems.length === 0 && (
-                      <li className="p-3 text-gray-400 text-center">No items available</li>
-                    )}
-                  </ul>
+                    </tbody>
+                  </table>
                   </div>
                 </div>
               </div>,
@@ -323,8 +370,10 @@ const AutoComplete = forwardRef(function AutoComplete({ value, onSelect, onEnter
                       {suggestions.map((item, index) => (
                         <li
                           key={item.id || index}
-                          className="p-3 hover:bg-blue-50 cursor-pointer border-b last:border-b-0 transition-colors"
+                          ref={(el) => (listItemRefs.current[index] = el)}
+                          className={`p-3 cursor-pointer border-b last:border-b-0 transition-colors ${index === selectedIndex ? 'bg-blue-100 border-l-4 border-l-blue-600' : 'hover:bg-blue-50'}`}
                           onClick={() => handleSelect(item)}
+                          onMouseEnter={() => setSelectedIndex(index)}
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex-1 pr-4">

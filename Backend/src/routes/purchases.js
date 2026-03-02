@@ -34,7 +34,7 @@ router.get("/next-invoice", requireAuth, async (req, res, next) => {
     // Get all invoice numbers and find max in JavaScript
     const result = await db.query(`SELECT invoice_no FROM purchases`);
     
-    let maxInvoice = -1;
+    let maxInvoice = 0;
     if (result.rows && result.rows.length > 0) {
       result.rows.forEach(row => {
         if (row.invoice_no) {
@@ -52,9 +52,39 @@ router.get("/next-invoice", requireAuth, async (req, res, next) => {
   } catch (err) {
     console.error("Next invoice error:", err);
     console.error("Error stack:", err.stack);
-    // If table doesn't exist or any error, return 0
-    res.json({ invoice_no: "0" });
+    // If table doesn't exist or any error, return 1
+    res.json({ invoice_no: "1" });
   }
+});
+
+// Navigate to previous saved invoice
+router.get("/prev-invoice/:invoiceNo", requireAuth, async (req, res, next) => {
+  try {
+    const current = parseInt(req.params.invoiceNo, 10);
+    const result = await db.query(
+      `SELECT invoice_no FROM purchases
+       WHERE invoice_no ~ '^[0-9]+$' AND CAST(invoice_no AS INTEGER) < $1
+       ORDER BY CAST(invoice_no AS INTEGER) DESC LIMIT 1`,
+      [isNaN(current) ? 999999999 : current]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: "No previous invoice" });
+    res.json({ invoice_no: result.rows[0].invoice_no });
+  } catch (err) { next(err); }
+});
+
+// Navigate to next saved invoice
+router.get("/next-invoice-from/:invoiceNo", requireAuth, async (req, res, next) => {
+  try {
+    const current = parseInt(req.params.invoiceNo, 10);
+    const result = await db.query(
+      `SELECT invoice_no FROM purchases
+       WHERE invoice_no ~ '^[0-9]+$' AND CAST(invoice_no AS INTEGER) > $1
+       ORDER BY CAST(invoice_no AS INTEGER) ASC LIMIT 1`,
+      [isNaN(current) ? 0 : current]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: "No next invoice" });
+    res.json({ invoice_no: result.rows[0].invoice_no });
+  } catch (err) { next(err); }
 });
 
 // Get purchase by invoice number
@@ -241,13 +271,12 @@ router.post(
       // Resolve supplier by name if supplier_id isn't provided
       if ((!supplier_id || supplier_id === null) && supplier_name && String(supplier_name).trim()) {
         const name = String(supplier_name).trim();
-        const { rows: sRows } = await db.query(`SELECT * FROM suppliers WHERE name = $1 LIMIT 1`, [name]);
+        const { rows: sRows } = await db.query(`SELECT * FROM suppliers WHERE LOWER(name) = LOWER($1) LIMIT 1`, [name]);
         if (sRows && sRows[0]) {
           supplier_id = sRows[0].id;
         } else {
-          await db.query(`INSERT INTO suppliers (name) VALUES ($1)`, [name]);
-          const { rows: s2 } = await db.query(`SELECT * FROM suppliers ORDER BY id DESC LIMIT 1`);
-          supplier_id = s2 && s2[0] ? s2[0].id : null;
+          const { rows: newS } = await db.query(`INSERT INTO suppliers (name) VALUES ($1) RETURNING id`, [name]);
+          supplier_id = newS[0]?.id || null;
         }
       }
 

@@ -11,6 +11,7 @@ import stockRoutes from "./routes/stock.js";
 import reportsRoutes from "./routes/reports.js";
 import auditRoutes from "./routes/audit.js";
 import returnsRoutes from "./routes/returns.js";
+import supplierReturnsRoutes from "./routes/supplierReturns.js";
 import expensesRoutes from "./routes/expenses.js";
 import adminRoutes from "./routes/admin.js";
 import errorHandler from "./middleware/errorHandler.js";
@@ -40,6 +41,7 @@ app.use("/api/stock", stockRoutes);
 app.use("/api/reports", reportsRoutes);
 app.use("/api/audit", auditRoutes);
 app.use("/api/returns", returnsRoutes);
+app.use("/api/supplier-returns", supplierReturnsRoutes);
 app.use("/api/expenses", expensesRoutes);
 app.use("/api/admin", adminRoutes);
 
