@@ -20,15 +20,28 @@ function toIsoDateString(d) {
 }
 
 // Aggregated sales per user
-router.get("/user-sales", requireAuth, requireRole(["admin", "manager"]), async (req, res) => {
+router.get("/user-sales", requireAuth, async (req, res) => {
   try {
-    const { rows } = await db.query(
-      `SELECT u.id as user_id, u.username, COUNT(s.id) as sales_count, COALESCE(SUM(s.net_total),0) as total_sales
-       FROM users u
-       LEFT JOIN sales s ON s.user_id = u.id
-       GROUP BY u.id, u.username
-       ORDER BY total_sales DESC`
-    );
+    const isAdminOrManager = req.user.role === "admin" || req.user.role === "manager";
+    let rows;
+    if (isAdminOrManager) {
+      ({ rows } = await db.query(
+        `SELECT u.id as user_id, u.username, COUNT(s.id) as sales_count, COALESCE(SUM(s.net_total),0) as total_sales
+         FROM users u
+         LEFT JOIN sales s ON s.user_id = u.id
+         GROUP BY u.id, u.username
+         ORDER BY total_sales DESC`
+      ));
+    } else {
+      ({ rows } = await db.query(
+        `SELECT u.id as user_id, u.username, COUNT(s.id) as sales_count, COALESCE(SUM(s.net_total),0) as total_sales
+         FROM users u
+         LEFT JOIN sales s ON s.user_id = u.id
+         WHERE u.id = $1
+         GROUP BY u.id, u.username`,
+        [req.user.id]
+      ));
+    }
     res.json(rows);
   } catch (err) {
     console.error(err);
@@ -161,6 +174,22 @@ router.get("/sales", requireAuth, requireRole(["admin", "manager"]), async (req,
       net_profit: netProfit,
     };
 
+    // Also fetch the actual missing-cost item details
+    const { rows: missingItems } = await db.query(
+      `SELECT si.id AS sale_item_id, s.id AS sale_id, p.name AS product_name,
+              si.qty, si.unit_price, s.created_at
+       FROM sales s
+       JOIN sale_items si ON si.sale_id = s.id
+       LEFT JOIN batches b ON b.id = si.batch_id
+       JOIN products p ON p.id = si.product_id
+       WHERE DATE(s.created_at) >= DATE($1) AND DATE(s.created_at) <= DATE($2)
+         AND COALESCE(si.unit_cost, b.cost, 0) <= 0
+         AND (COALESCE(si.qty, 0) + COALESCE((SELECT SUM(ri.qty) FROM return_items ri WHERE ri.sale_item_id = si.id), 0)) > 0
+       ORDER BY s.created_at DESC`,
+      [from, to]
+    );
+    summary.missing_cost_items = missingItems;
+
     res.json({ from, to, rows, summary });
   } catch (err) {
     console.error(err);
@@ -211,7 +240,7 @@ router.get("/user-history", requireAuth, requireRole(["admin", "manager"]), asyn
 
 // Item-level user history
 // GET /reports/user-history-items?user_id=123&from=YYYY-MM-DD&to=YYYY-MM-DD
-router.get("/user-history-items", requireAuth, requireRole(["admin", "manager"]), async (req, res) => {
+router.get("/user-history-items", requireAuth, async (req, res) => {
   try {
     const userId = Number(req.query.user_id);
     if (!Number.isFinite(userId) || userId <= 0) {
@@ -233,7 +262,7 @@ router.get("/user-history-items", requireAuth, requireRole(["admin", "manager"])
           si.product_id,
           p.name as product_name,
           si.batch_id,
-          b.batch_no,
+          COALESCE(b.batch_no, p.batch_no) as batch_no,
           si.qty,
           si.unit_price,
           (si.qty * si.unit_price) as line_total
@@ -258,7 +287,7 @@ router.get("/user-history-items", requireAuth, requireRole(["admin", "manager"])
           ri.product_id,
           p.name as product_name,
           ri.batch_id,
-          b.batch_no,
+          COALESCE(b.batch_no, p.batch_no) as batch_no,
           ri.qty,
           ri.unit_price,
           (ri.qty * ri.unit_price) as line_total

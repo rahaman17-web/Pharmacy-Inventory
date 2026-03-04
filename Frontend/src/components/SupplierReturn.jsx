@@ -243,22 +243,9 @@ export default function SupplierReturn({ onBack }) {
   return (
     <div className="p-4 sm:p-6 bg-gray-100 min-h-screen">
       {/* Header */}
-      <div className="bg-gradient-to-r from-red-500 to-orange-500 rounded-xl p-6 text-white mb-5 shadow-lg">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h1 className="text-2xl font-extrabold">Return to Supplier</h1>
-            <p className="text-red-100 text-sm mt-1">
-              Browse short-expire, expired and testing items — supplier shown on
-              every row. Select items to return and confirm.
-            </p>
-          </div>
-          <button
-            onClick={onBack}
-            className="bg-white/20 hover:bg-white/30 text-white font-bold px-4 py-2 rounded-lg text-sm transition"
-          >
-            Back
-          </button>
-        </div>
+      <div style={{ background: "#1e293b", color: "#fff", padding: "12px 20px", display: "flex", alignItems: "center", gap: 14, borderRadius: 10, marginBottom: 20 }}>
+        <button onClick={onBack} style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 6, padding: "6px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>← Back</button>
+        <span style={{ fontSize: 18, fontWeight: 800 }}>RETURN TO SUPPLIER</span>
       </div>
 
       {/* Tabs */}

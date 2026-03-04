@@ -5,8 +5,9 @@ export default function AdminAudit({ onBack }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState("");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const today = new Date().toISOString().slice(0, 10);
+  const [fromDate, setFromDate] = useState(today);
+  const [toDate, setToDate] = useState(today);
 
   useEffect(() => {
     async function load() {
@@ -120,23 +121,9 @@ export default function AdminAudit({ onBack }) {
       <div>
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r from-gray-600 to-gray-800 p-6 sm:p-8 text-white">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
-                  🛡️ AUDIT LOGS
-                </h1>
-                <p className="text-gray-300 text-sm mt-1">
-                  System activity tracking
-                </p>
-              </div>
-              <button
-                onClick={onBack}
-                className="px-5 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-semibold transition text-sm sm:text-base"
-              >
-                ← Back
-              </button>
-            </div>
+          <div style={{ background: "#1e293b", color: "#fff", padding: "12px 20px", display: "flex", alignItems: "center", gap: 14 }}>
+            <button onClick={onBack} style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 6, padding: "6px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>← Back</button>
+            <span style={{ fontSize: 18, fontWeight: 800 }}>AUDIT LOGS</span>
           </div>
 
           {/* Search Bar */}

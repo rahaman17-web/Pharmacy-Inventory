@@ -5,16 +5,19 @@ export default function ReprintInvoice({ onBack }) {
   const [invoiceNo, setInvoiceNo] = useState("");
   const [saleId, setSaleId] = useState(null);
   const [error, setError] = useState("");
+  const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSearch = async () => {
     if (!invoiceNo.trim()) {
       setError("Please enter an invoice number");
+      setNotFound(false);
       return;
     }
 
     setLoading(true);
     setError("");
+    setNotFound(false);
     setSaleId(null);
 
     try {
@@ -22,15 +25,18 @@ export default function ReprintInvoice({ onBack }) {
       const { data } = await api.get(`/sales/${invoiceNo}`);
       
       if (!data || !data.sale) {
-        setError("Invoice not found");
+        setNotFound(true);
         return;
       }
 
-      // Found - show receipt
       setSaleId(data.sale.id);
     } catch (err) {
-      console.error("Search error:", err);
-      setError(err.response?.data?.error || "Invoice not found. Please check the number.");
+      if (err.response?.status === 404) {
+        setNotFound(true);
+      } else {
+        console.error("Search error:", err);
+        setError(err.response?.data?.error || "Something went wrong. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -40,6 +46,7 @@ export default function ReprintInvoice({ onBack }) {
     setSaleId(null);
     setInvoiceNo("");
     setError("");
+    setNotFound(false);
   };
 
   return (
@@ -47,19 +54,9 @@ export default function ReprintInvoice({ onBack }) {
       <div className="max-w-3xl mx-auto">
         <div className="bg-white rounded-lg shadow-xl overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 px-4 sm:px-10 py-6 sm:py-8 text-white">
-            <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-              <div>
-                <h1 className="text-2xl sm:text-4xl font-black tracking-tight">🔍 REPRINT INVOICE</h1>
-                <p className="text-indigo-100 text-sm mt-2">Search and reprint past invoices</p>
-              </div>
-              <button
-                onClick={onBack}
-                className="px-6 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-semibold transition"
-              >
-                ← Back
-              </button>
-            </div>
+          <div style={{ background: "#1e293b", color: "#fff", padding: "12px 20px", display: "flex", alignItems: "center", gap: 14 }}>
+            <button onClick={onBack} style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 6, padding: "6px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>← Back</button>
+            <span style={{ fontSize: 18, fontWeight: 800 }}>REPRINT INVOICE</span>
           </div>
 
           {/* Search Section */}
@@ -88,6 +85,18 @@ export default function ReprintInvoice({ onBack }) {
                 </button>
               </div>
             </div>
+
+            {notFound && (
+              <div className="p-4 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 rounded">
+                <div className="flex items-center">
+                  <span className="text-2xl mr-3">🔍</span>
+                  <div>
+                    <p className="font-bold">No Record Found</p>
+                    <p>Invoice <strong>#{invoiceNo}</strong> does not exist in the system.</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {error && (
               <div className="p-4 bg-red-50 border-l-4 border-red-600 text-red-800 rounded">

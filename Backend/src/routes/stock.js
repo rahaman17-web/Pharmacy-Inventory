@@ -39,7 +39,7 @@ router.get("/", requireAuth, requireRole(["admin", "manager", "storekeeper", "ca
            ) AS purchase_invoice
            FROM batches b
            JOIN products p ON p.id = b.product_id
-         WHERE b.qty > 0
+         -- No qty > 0 filter: show all batches including depleted ones
 
         UNION ALL
 
@@ -59,8 +59,8 @@ router.get("/", requireAuth, requireRole(["admin", "manager", "storekeeper", "ca
            NULL::TEXT     AS purchase_invoice
            FROM products p
            LEFT JOIN suppliers s ON s.id = p.supplier_id
-           WHERE p.opening_qty > 0
-             AND NOT EXISTS (SELECT 1 FROM batches b WHERE b.product_id = p.id)
+           WHERE NOT EXISTS (SELECT 1 FROM batches b WHERE b.product_id = p.id)
+           -- No opening_qty > 0 filter: show even 0-qty products
       ) AS combined
       ORDER BY product_name, COALESCE(expiry, '9999-12-31'::date)`;
 

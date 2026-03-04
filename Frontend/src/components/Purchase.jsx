@@ -66,6 +66,7 @@ export default function Purchase({ onBack }) {
   const [showInvoiceList, setShowInvoiceList] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [availableProducts, setAvailableProducts] = useState([]);
+  const [stockData, setStockData] = useState({});
   const [searchInvoice, setSearchInvoice] = useState("");
   const [invoiceList, setInvoiceList] = useState([]);
   const [barcode, setBarcode] = useState("");
@@ -197,8 +198,7 @@ export default function Purchase({ onBack }) {
             name: product.name,
             pack_size: product.pack_size || 1,
           };
-          if (targetIdx === updated.length - 1)
-            updated.push(emptyRow());
+          if (targetIdx === updated.length - 1) updated.push(emptyRow());
           return updated;
         });
       } else {
@@ -441,6 +441,20 @@ export default function Purchase({ onBack }) {
           : "/products";
         const { data } = await api.get(url);
         setAvailableProducts(Array.isArray(data) ? data : []);
+        // Build stock map from batches
+        try {
+          const { data: stockBatches } = await api.get("/stock");
+          const stockMap = {};
+          stockBatches.forEach((b) => {
+            stockMap[b.product_id] = (stockMap[b.product_id] || 0) + b.qty;
+          });
+          // Fall back to opening_qty for products with no batch rows
+          (Array.isArray(data) ? data : []).forEach((p) => {
+            if (!stockMap[p.id] && Number(p.opening_qty) > 0)
+              stockMap[p.id] = Number(p.opening_qty);
+          });
+          setStockData(stockMap);
+        } catch (e) {}
       } catch (e) {}
     })();
   }, [supplierId]);
@@ -577,7 +591,8 @@ export default function Purchase({ onBack }) {
 
       // Accept manual purchaseRate OR auto-calculated from sale price + discounts
       const calcPurchaseRate = (() => {
-        if (item.purchaseRate && Number(item.purchaseRate) > 0) return Number(item.purchaseRate);
+        if (item.purchaseRate && Number(item.purchaseRate) > 0)
+          return Number(item.purchaseRate);
         const sp = Number(item.sellingPrice) || 0;
         if (sp > 0) {
           let p = sp * (1 - (Number(item.discount1) || 0) / 100);
@@ -713,15 +728,15 @@ export default function Purchase({ onBack }) {
   // Ordered list of editable column refs for keyboard navigation
   const COLS = [
     productNameRefs, // 0 – Product
-    packRefs,        // 1 – Qty (packs)
-    salePriceRefs,   // 2 – Sale Price
-    disc1Refs,       // 3 – Disc %
-    disc2Refs,       // 4 – Extra %
-    gstRefs,         // 5 – GST
-    purPriceRefs,    // 6 – Pur Price
-    batchRefs,       // 7 – Batch
-    bonusRefs,       // 8 – Bonus
-    expiryRefs,      // 9 – Expiry
+    packRefs, // 1 – Qty (packs)
+    salePriceRefs, // 2 – Sale Price
+    disc1Refs, // 3 – Disc %
+    disc2Refs, // 4 – Extra %
+    gstRefs, // 5 – GST
+    purPriceRefs, // 6 – Pur Price
+    batchRefs, // 7 – Batch
+    bonusRefs, // 8 – Bonus
+    expiryRefs, // 9 – Expiry
   ];
 
   /**
@@ -805,16 +820,19 @@ export default function Purchase({ onBack }) {
         fontFamily: "'Segoe UI',Tahoma,sans-serif",
       }}
     >
-      {/* ══════ TITLE BAR ══════ */}
-      <div className="shrink-0 text-center font-black"
-        style={{ background:"#e8c840", color:"#111", fontSize:"clamp(22px,2.6vw,36px)", letterSpacing:4, padding:"4px 0 2px" }}>
-        PURCHASE INVOICE
+      {/* ══════ HEADER BAR ══════ */}
+      <div style={{ background:"#1e293b", color:"#fff", padding:"10px 20px", display:"flex", alignItems:"center", gap:14, flexShrink:0 }}>
+        <button onClick={onBack} style={{ background:"rgba(255,255,255,0.15)", border:"1px solid rgba(255,255,255,0.3)", color:"#fff", borderRadius:6, padding:"6px 16px", fontWeight:700, fontSize:13, cursor:"pointer" }}>← Back</button>
+        <span style={{ fontSize:18, fontWeight:800 }}>PURCHASE INVOICE</span>
       </div>
-
       {/* ══════ HEADER FORM ══════ */}
       <div
         className="shrink-0 px-3 py-1.5 flex items-start gap-4"
-        style={{ background: "#f0f0f0", borderBottom: "2px solid #aaa", color: "#111" }}
+        style={{
+          background: "#f0f0f0",
+          borderBottom: "2px solid #aaa",
+          color: "#111",
+        }}
       >
         {/* Nav buttons */}
         <div className="flex flex-col gap-1 shrink-0">
@@ -823,7 +841,9 @@ export default function Purchase({ onBack }) {
               if (!invoiceNo || invoiceNo === "0") return;
               try {
                 const api = (await import("../api")).default;
-                const { data } = await api.get(`/purchases/next-invoice-from/${invoiceNo}`);
+                const { data } = await api.get(
+                  `/purchases/next-invoice-from/${invoiceNo}`,
+                );
                 loadInvoice(data.invoice_no);
               } catch {
                 // No saved next invoice — start a fresh new one
@@ -831,7 +851,9 @@ export default function Purchase({ onBack }) {
                 try {
                   const { data } = await api.get("/purchases/next-invoice");
                   setInvoiceNo(data.invoice_no || "1");
-                } catch { setInvoiceNo(String(Number(invoiceNo) + 1)); }
+                } catch {
+                  setInvoiceNo(String(Number(invoiceNo) + 1));
+                }
                 setSupplier("");
                 setSupplierId(null);
                 setPurchaseDate(new Date().toISOString().split("T")[0]);
@@ -856,7 +878,9 @@ export default function Purchase({ onBack }) {
               if (!invoiceNo || invoiceNo === "0") return;
               try {
                 const api = (await import("../api")).default;
-                const { data } = await api.get(`/purchases/prev-invoice/${invoiceNo}`);
+                const { data } = await api.get(
+                  `/purchases/prev-invoice/${invoiceNo}`,
+                );
                 loadInvoice(data.invoice_no);
               } catch {
                 alert("No previous invoice found.");
@@ -1159,7 +1183,7 @@ export default function Purchase({ onBack }) {
             );
           })()}
           <div style={{ fontSize: "clamp(10px,0.9vw,12px)", color: "#555" }}>
-            Use ☑ in <strong style={{ color:"#111" }}>Test</strong> column
+            Use ☑ in <strong style={{ color: "#111" }}>Test</strong> column
           </div>
         </div>
 
@@ -1212,7 +1236,6 @@ export default function Purchase({ onBack }) {
           </div>
         </div>
       </div>
-
       {/* ══════ BARCODE + STOCK ROW ══════ */}
       <div
         className="shrink-0 flex items-center gap-3 px-2 py-0.5"
@@ -1263,7 +1286,9 @@ export default function Purchase({ onBack }) {
               fontWeight: 900,
               color: "#1a4d00",
             }}
-            value={medicines.reduce((s, r) => s + (Number(r.quantity) || 0), 0) || ""}
+            value={
+              medicines.reduce((s, r) => s + (Number(r.quantity) || 0), 0) || ""
+            }
           />
           <span style={{ fontSize: "clamp(12px,1.1vw,14px)", fontWeight: 700 }}>
             containing
@@ -1280,546 +1305,649 @@ export default function Purchase({ onBack }) {
               fontWeight: 900,
               color: "#1a4d00",
             }}
-            value={medicines.reduce((s, r) => s + getTotals(r).totalPieces, 0) || ""}
+            value={
+              medicines.reduce((s, r) => s + getTotals(r).totalPieces, 0) || ""
+            }
           />
         </div>
       </div>
-
       {/* ══════ TABLE PANEL ══════ */}
-      <div className="flex-1 min-h-0 flex flex-col px-3 pb-1" style={{ background: "#e8c840" }}>
-        <div style={{ flex:1, minHeight:0, display:"flex", flexDirection:"column", border:"2px solid #444", background:"#fff" }}>
-          {/* Scrollable table + X column */}
-          <div style={{ flex:1, minHeight:0, display:"flex" }}>
-          {/* Scrollable table */}
-          <div style={{ flex:1, minWidth:0, overflowX:"auto", overflowY:"auto", backgroundImage:"repeating-linear-gradient(to bottom, #fffde7 0px, #fffde7 33px, #edf5dc 33px, #edf5dc 66px)", backgroundAttachment:"local" }} ref={tableContainerRef}>
-          <table
-            className="w-full border-collapse"
-            style={{
-              fontSize: "clamp(13px,1.15vw,15px)",
-              tableLayout: "fixed",
-              minWidth: 1150,
-            }}
-          >
-            <colgroup>
-              <col style={{ width: "3.5%" }} />
-              <col style={{ width: "5%" }} />
-              <col style={{ width: "15%" }} />
-              <col style={{ width: "5%" }} />
-              <col style={{ width: "5%" }} />
-              <col style={{ width: "6.5%" }} />
-              <col style={{ width: "4.5%" }} />
-              <col style={{ width: "4.5%" }} />
-              <col style={{ width: "4%" }} />
-              <col style={{ width: "6.5%" }} />
-              <col style={{ width: "6.5%" }} />
-              <col style={{ width: "4.5%" }} />
-              <col style={{ width: "7.5%" }} />
-              <col style={{ width: "7.5%" }} />
-              <col style={{ width: "5.5%" }} />
-            </colgroup>
-            <thead className="sticky top-0 z-10">
-              <tr
-                style={{
-                  background: "#1a3a1a",
-                  borderBottom: "2px solid #0d2d0d",
-                  color: "#fff",
-                }}
-              >
-                {[
-                  "SNo.",
-                  "ID(Auto)",
-                  "Product",
-                  "Pack",
-                  "Pieces",
-                  "Sale Price",
-                  "Disc%",
-                  "Extra%",
-                  "GST",
-                  "Pur Price",
-                  "Batch",
-                  "Bonus",
-                  "Expiry",
-                  "Gross Amt",
-                  "Test",
-                ].map((h) => {
-                  const req = [
-                    "Product",
-                    "Sale Price",
-                    "Pur Price",
-                    "Batch",
-                    "Expiry",
-                  ];
-                  return (
-                    <th
-                      key={h}
-                      className="py-1 px-1 border border-gray-700 text-center font-bold"
-                      style={{
-                        fontSize: "clamp(12px,1.1vw,14px)",
-                        whiteSpace: "nowrap",
-                        color: "#fff",
-                        background:
-                          h === "Test"
-                            ? "#7c4a00"
-                            : req.includes(h)
-                              ? "#2d5a1e"
-                              : undefined,
-                      }}
-                    >
-                      {h}
-                      {req.includes(h) && (
-                        <span style={{ color: "#dc2626", fontWeight: 900 }}>
-                          {" "}
-                          *
-                        </span>
-                      )}
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {medicines.map((r, i) => {
-                const t = getTotals(r);
-                const autoPrice = (() => {
-                  const sp = Number(r.sellingPrice) || 0;
-                  if (sp > 0 && !r.purchaseRate) {
-                    let p = sp * (1 - (Number(r.discount1) || 0) / 100);
-                    p = p * (1 - (Number(r.discount2) || 0) / 100);
-                    p = p * (1 + (Number(r.gst) || 0) / 100);
-                    return p.toFixed(2);
-                  }
-                  return r.purchaseRate || "";
-                })();
-                const totalPieces =
-                  (Number(r.quantity) || 0) * (Number(r.pack_size) || 1);
-                const rowName =
-                  (typeof r.name === "object" ? r.name?.name : r.name) || "";
-                const isFilled = !!rowName.trim();
-                const hasAnyData =
-                  isFilled ||
-                  String(r.batch || "").trim() ||
-                  String(r.expiry || "").trim() ||
-                  Number(r.quantity) > 0 ||
-                  Number(r.sellingPrice) > 0 ||
-                  Number(r.purchaseRate) > 0;
-                const missingProduct = hasAnyData && !isFilled;
-                const missingSale = isFilled && !(Number(r.sellingPrice) > 0);
-                const missingCost = isFilled && !(Number(autoPrice) > 0);
-                const missingBatch = isFilled && !String(r.batch || "").trim();
-                const missingExpiry =
-                  isFilled && !String(r.expiry || "").trim();
-                return (
-                  <tr
-                    key={i}
-                    style={{
-                      background: r.isTesting
-                        ? "#ffe4b0"
-                        : i % 2 === 0
-                          ? "#fffde7"
-                          : "#edf5dc",
-                      height: "clamp(30px,2.8vh,36px)",
-                      borderBottom: "1px solid #aaa",
-                    }}
-                  >
-                    <td
-                      style={{
-                        padding: 0,
-                        border: "1px solid #aaa",
-                        textAlign: "center",
-                        fontSize: "clamp(13px,1.1vw,15px)",
-                        fontWeight: 700,
-                      }}
-                    >
-                      {i + 1}
-                    </td>
-                    <td
-                      style={{
-                        padding: 0,
-                        border: "1px solid #aaa",
-                        textAlign: "center",
-                        fontSize: "clamp(12px,1vw,14px)",
-                        color: "#555",
-                      }}
-                    >
-                      {r.product_id || ""}
-                    </td>
-                    <td
-                      style={{
-                        padding: 0,
-                        border: missingProduct
-                          ? "2px solid #dc2626"
-                          : "1px solid #aaa",
-                        background: missingProduct ? "#fff5f5" : undefined,
-                      }}
-                    >
-                      <AutoComplete
-                        value={{ id: r.product_id, name: r.name }}
-                        ref={(el) => (productNameRefs.current[i] = el)}
-                        onSelect={(val) =>
-                          updateRow(
-                            i,
-                            {
-                              product_id: val?.id,
-                              name: val?.name,
-                              pack_size: val?.pack_size || 1,
-                              discount1: val
-                                ? String(
-                                    Number(val.purchase_percent) > 0
-                                      ? val.purchase_percent
-                                      : 14.5,
-                                  )
-                                : "",
-                            },
-                            { checkAdd: true },
-                          )
-                        }
-                        onEnter={() => packRefs.current[i]?.focus()}
-                        supplierId={supplierId}
-                        allItems={availableProducts}
-                        placeholder=""
-                        allowCreate={false}
-                        inputStyle={TBL_CELL}
-                        inputClassName=""
-                      />
-                    </td>
-                    <td style={{ padding: 0, border: "1px solid #aaa" }}>
-                      <input
-                        ref={(el) => (packRefs.current[i] = el)}
-                        type="number"
-                        value={r.quantity}
-                        onChange={(e) =>
-                          updateRow(i, { quantity: e.target.value })
-                        }
-                        onKeyDown={(e) => navigateCell(e, i, 1)}
-                        style={TBL_CELL}
-                      />
-                    </td>
-                    <td style={{ padding: 0, border: "1px solid #aaa" }}>
-                      <input
-                        readOnly
-                        value={totalPieces || ""}
-                        style={{ ...TBL_CELL, background: "transparent" }}
-                      />
-                    </td>
-                    <td
-                      style={{
-                        padding: 0,
-                        border: missingSale
-                          ? "2px solid #dc2626"
-                          : "1px solid #aaa",
-                        background: missingSale ? "#fff5f5" : undefined,
-                      }}
-                    >
-                      <input
-                        ref={(el) => (salePriceRefs.current[i] = el)}
-                        type="number"
-                        value={r.sellingPrice}
-                        onChange={(e) =>
-                          updateRow(i, { sellingPrice: e.target.value })
-                        }
-                        onKeyDown={(e) => navigateCell(e, i, 2)}
-                        style={TBL_CELL}
-                      />
-                    </td>
-                    <td style={{ padding: 0, border: "1px solid #aaa" }}>
-                      <input
-                        ref={(el) => (disc1Refs.current[i] = el)}
-                        type="number"
-                        value={r.discount1}
-                        onChange={(e) =>
-                          updateRow(i, { discount1: e.target.value })
-                        }
-                        onKeyDown={(e) => navigateCell(e, i, 3)}
-                        style={TBL_CELL}
-                      />
-                    </td>
-                    <td style={{ padding: 0, border: "1px solid #aaa" }}>
-                      <input
-                        ref={(el) => (disc2Refs.current[i] = el)}
-                        type="number"
-                        value={r.discount2}
-                        onChange={(e) =>
-                          updateRow(i, { discount2: e.target.value })
-                        }
-                        onKeyDown={(e) => navigateCell(e, i, 4)}
-                        style={TBL_CELL}
-                      />
-                    </td>
-                    <td style={{ padding: 0, border: "1px solid #aaa" }}>
-                      <input
-                        ref={(el) => (gstRefs.current[i] = el)}
-                        type="number"
-                        value={r.gst}
-                        onChange={(e) => updateRow(i, { gst: e.target.value })}
-                        onKeyDown={(e) => navigateCell(e, i, 5)}
-                        style={TBL_CELL}
-                      />
-                    </td>
-                    <td
-                      style={{
-                        padding: 0,
-                        border: missingCost
-                          ? "2px solid #dc2626"
-                          : "1px solid #aaa",
-                        background: missingCost ? "#fff5f5" : undefined,
-                      }}
-                    >
-                      <input
-                        ref={(el) => (purPriceRefs.current[i] = el)}
-                        type="number"
-                        value={autoPrice}
-                        onChange={(e) =>
-                          updateRow(i, { purchaseRate: e.target.value })
-                        }
-                        onKeyDown={(e) => navigateCell(e, i, 6)}
-                        style={TBL_CELL}
-                      />
-                    </td>
-                    <td
-                      style={{
-                        padding: 0,
-                        border: missingBatch
-                          ? "2px solid #dc2626"
-                          : "1px solid #aaa",
-                        background: missingBatch ? "#fff5f5" : undefined,
-                      }}
-                    >
-                      <input
-                        ref={(el) => (batchRefs.current[i] = el)}
-                        value={r.batch}
-                        onChange={(e) =>
-                          updateRow(i, { batch: e.target.value })
-                        }
-                        onKeyDown={(e) => navigateCell(e, i, 7)}
-                        style={TBL_CELL}
-                      />
-                    </td>
-                    <td style={{ padding: 0, border: "1px solid #aaa" }}>
-                      <input
-                        ref={(el) => (bonusRefs.current[i] = el)}
-                        type="number"
-                        value={r.bonusQty}
-                        onChange={(e) =>
-                          updateRow(i, { bonusQty: e.target.value })
-                        }
-                        onKeyDown={(e) => navigateCell(e, i, 8)}
-                        style={TBL_CELL}
-                      />
-                    </td>
-                    <td
-                      style={{
-                        padding: 0,
-                        border: missingExpiry
-                          ? "2px solid #dc2626"
-                          : "1px solid #aaa",
-                        background: missingExpiry ? "#fff5f5" : undefined,
-                      }}
-                    >
-                      <input
-                        ref={(el) => (expiryRefs.current[i] = el)}
-                        type="date"
-                        value={r.expiry}
-                        onChange={(e) =>
-                          updateRow(i, { expiry: e.target.value })
-                        }
-                        onKeyDown={(e) => {
-                          // For date inputs, only intercept Enter/Left/Right for navigation
-                          // to avoid fighting browser's date picker on Up/Down
-                          if (e.key === "Enter" || e.key === "ArrowRight") {
-                            e.preventDefault();
-                            // End of row → go directly to next row's product name
-                            const nextRow = i + 1;
-                            if (nextRow < medicines.length) {
-                              COLS[0].current[nextRow]?.focus();
-                            } else {
-                              setMedicines((p) => [...p, emptyRow()]);
-                              setTimeout(() => COLS[0].current[i + 1]?.focus(), 50);
-                            }
-                          } else if (e.key === "ArrowLeft") {
-                            e.preventDefault();
-                            COLS[8].current[i]?.focus();
-                          } else if (e.key === "ArrowDown") {
-                            e.preventDefault();
-                            if (i + 1 < medicines.length) COLS[9].current[i + 1]?.focus();
-                          } else if (e.key === "ArrowUp") {
-                            e.preventDefault();
-                            if (i > 0) COLS[9].current[i - 1]?.focus();
-                          }
-                        }}
-                        style={{
-                          ...TBL_CELL,
-                          fontSize: "clamp(12px,1vw,14px)",
-                        }}
-                      />
-                    </td>
-                    <td
-                      style={{
-                        padding: "0 5px",
-                        border: "1px solid #aaa",
-                        textAlign: "right",
-                        fontSize: "clamp(13px,1.1vw,15px)",
-                        fontWeight: 700,
-                      }}
-                    >
-                      {t.finalAmt > 0 ? t.finalAmt.toFixed(2) : ""}
-                    </td>
-                    <td
-                      style={{
-                        padding: 0,
-                        border: "1px solid #aaa",
-                        textAlign: "center",
-                        background: r.isTesting ? "#ea580c" : "transparent",
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={!!r.isTesting}
-                        onChange={(e) =>
-                          updateRow(i, { isTesting: e.target.checked })
-                        }
-                        title={
-                          r.isTesting
-                            ? "Testing item — will be returned"
-                            : "Mark as testing item"
-                        }
-                        style={{
-                          width: 14,
-                          height: 14,
-                          accentColor: "#e05000",
-                          cursor: "pointer",
-                        }}
-                      />
-                      {r.isTesting && (
-                        <span
-                          style={{
-                            display: "block",
-                            fontSize: "clamp(8px,0.65vw,10px)",
-                            fontWeight: 900,
-                            color: "#fff",
-                            lineHeight: 1,
-                            letterSpacing: 0.5,
-                          }}
-                        >
-                          TEST
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        {/* X delete buttons column — fixed width outside scroll */}
+      <div
+        className="flex-1 min-h-0 flex flex-col px-3 pb-1"
+        style={{ background: "#e8c840" }}
+      >
         <div
-          className="shrink-0 flex flex-col"
           style={{
-            width: 26,
-            background: "#e8e8e8",
-            borderLeft: "1px solid #aaa",
+            flex: 1,
+            minHeight: 0,
+            display: "flex",
+            flexDirection: "column",
+            border: "2px solid #444",
+            background: "#fff",
           }}
         >
-          <div
-            style={{
-              height: "clamp(30px,2.8vh,36px)",
-              background: "#1a3a1a",
-              borderBottom: "2px solid #0d2d0d",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 13,
-              fontWeight: 700,
-              color: "#fff",
-            }}
-          >
-            ✕
-          </div>
-          {medicines.length === 0 && (
-            <div style={{ height: "clamp(30px,2.8vh,36px)" }} />
-          )}
-          {medicines.map((r, i) => (
+          {/* Scrollable table + X column */}
+          <div style={{ flex: 1, minHeight: 0, display: "flex" }}>
+            {/* Scrollable table */}
             <div
-              key={i}
               style={{
-                height: "clamp(30px,2.8vh,36px)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderBottom: "1px solid #ccc",
-                background: r.isTesting
-                  ? "#ffe4b0"
-                  : i % 2 === 0
-                    ? "#f0f0f0"
-                    : "#e8e8e8",
+                flex: 1,
+                minWidth: 0,
+                overflowX: "auto",
+                overflowY: "auto",
+                backgroundImage:
+                  "repeating-linear-gradient(to bottom, #fffde7 0px, #fffde7 33px, #edf5dc 33px, #edf5dc 66px)",
+                backgroundAttachment: "local",
+              }}
+              ref={tableContainerRef}
+            >
+              <table
+                className="w-full border-collapse"
+                style={{
+                  fontSize: "clamp(13px,1.15vw,15px)",
+                  tableLayout: "fixed",
+                  minWidth: 1150,
+                }}
+              >
+                <colgroup>
+                  <col style={{ width: "3.5%" }} />
+                  <col style={{ width: "5%" }} />
+                  <col style={{ width: "15%" }} />
+                  <col style={{ width: "5%" }} />
+                  <col style={{ width: "5%" }} />
+                  <col style={{ width: "6.5%" }} />
+                  <col style={{ width: "4.5%" }} />
+                  <col style={{ width: "4.5%" }} />
+                  <col style={{ width: "4%" }} />
+                  <col style={{ width: "6.5%" }} />
+                  <col style={{ width: "6.5%" }} />
+                  <col style={{ width: "4.5%" }} />
+                  <col style={{ width: "7.5%" }} />
+                  <col style={{ width: "7.5%" }} />
+                  <col style={{ width: "5.5%" }} />
+                </colgroup>
+                <thead className="sticky top-0 z-10">
+                  <tr
+                    style={{
+                      background: "#1a3a1a",
+                      borderBottom: "2px solid #0d2d0d",
+                      color: "#fff",
+                    }}
+                  >
+                    {[
+                      "SNo.",
+                      "ID(Auto)",
+                      "Product",
+                      "Pack",
+                      "Pieces",
+                      "Sale Price",
+                      "Disc%",
+                      "Extra%",
+                      "GST",
+                      "Pur Price",
+                      "Batch",
+                      "Bonus",
+                      "Expiry",
+                      "Gross Amt",
+                      "Test",
+                    ].map((h) => {
+                      const req = [
+                        "Product",
+                        "Sale Price",
+                        "Pur Price",
+                        "Batch",
+                        "Expiry",
+                      ];
+                      return (
+                        <th
+                          key={h}
+                          className="py-1 px-1 border border-gray-700 text-center font-bold"
+                          style={{
+                            fontSize: "clamp(12px,1.1vw,14px)",
+                            whiteSpace: "nowrap",
+                            color: "#fff",
+                            background:
+                              h === "Test"
+                                ? "#7c4a00"
+                                : req.includes(h)
+                                  ? "#2d5a1e"
+                                  : undefined,
+                          }}
+                        >
+                          {h}
+                          {req.includes(h) && (
+                            <span style={{ color: "#dc2626", fontWeight: 900 }}>
+                              {" "}
+                              *
+                            </span>
+                          )}
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {medicines.map((r, i) => {
+                    const t = getTotals(r);
+                    const autoPrice = (() => {
+                      const sp = Number(r.sellingPrice) || 0;
+                      if (sp > 0 && !r.purchaseRate) {
+                        let p = sp * (1 - (Number(r.discount1) || 0) / 100);
+                        p = p * (1 - (Number(r.discount2) || 0) / 100);
+                        p = p * (1 + (Number(r.gst) || 0) / 100);
+                        return p.toFixed(2);
+                      }
+                      return r.purchaseRate || "";
+                    })();
+                    const totalPieces =
+                      (Number(r.quantity) || 0) * (Number(r.pack_size) || 1);
+                    const rowName =
+                      (typeof r.name === "object" ? r.name?.name : r.name) ||
+                      "";
+                    const isFilled = !!rowName.trim();
+                    const hasAnyData =
+                      isFilled ||
+                      String(r.batch || "").trim() ||
+                      String(r.expiry || "").trim() ||
+                      Number(r.quantity) > 0 ||
+                      Number(r.sellingPrice) > 0 ||
+                      Number(r.purchaseRate) > 0;
+                    const missingProduct = hasAnyData && !isFilled;
+                    const missingSale =
+                      isFilled && !(Number(r.sellingPrice) > 0);
+                    const missingCost = isFilled && !(Number(autoPrice) > 0);
+                    const missingBatch =
+                      isFilled && !String(r.batch || "").trim();
+                    const missingExpiry =
+                      isFilled && !String(r.expiry || "").trim();
+                    return (
+                      <tr
+                        key={i}
+                        style={{
+                          background: r.isTesting
+                            ? "#ffe4b0"
+                            : i % 2 === 0
+                              ? "#fffde7"
+                              : "#edf5dc",
+                          height: "clamp(30px,2.8vh,36px)",
+                          borderBottom: "1px solid #aaa",
+                        }}
+                      >
+                        <td
+                          style={{
+                            padding: 0,
+                            border: "1px solid #aaa",
+                            textAlign: "center",
+                            fontSize: "clamp(13px,1.1vw,15px)",
+                            fontWeight: 700,
+                          }}
+                        >
+                          {i + 1}
+                        </td>
+                        <td
+                          style={{
+                            padding: 0,
+                            border: "1px solid #aaa",
+                            textAlign: "center",
+                            fontSize: "clamp(12px,1vw,14px)",
+                            color: "#555",
+                          }}
+                        >
+                          {r.product_id || ""}
+                        </td>
+                        <td
+                          style={{
+                            padding: 0,
+                            border: missingProduct
+                              ? "2px solid #dc2626"
+                              : "1px solid #aaa",
+                            background: missingProduct ? "#fff5f5" : undefined,
+                          }}
+                        >
+                          <AutoComplete
+                            value={{ id: r.product_id, name: r.name }}
+                            ref={(el) => (productNameRefs.current[i] = el)}
+                            onSelect={(val) =>
+                              updateRow(
+                                i,
+                                {
+                                  product_id: val?.id,
+                                  name: val?.category
+                                    ? `${val.category} ${val.name}`
+                                    : val?.name,
+                                  pack_size: val?.pack_size || 1,
+                                  batch: val?.batch_no || "",
+                                  expiry: val?.expiry_date
+                                    ? val.expiry_date.split("T")[0]
+                                    : "",
+                                  discount1: val
+                                    ? String(
+                                        Number(val.purchase_percent) > 0
+                                          ? val.purchase_percent
+                                          : 14.5,
+                                      )
+                                    : "",
+                                },
+                                { checkAdd: true },
+                              )
+                            }
+                            onEnter={() => packRefs.current[i]?.focus()}
+                            supplierId={supplierId}
+                            allItems={availableProducts}
+                            placeholder=""
+                            allowCreate={false}
+                            fullScreenList={true}
+                            stockData={stockData}
+                            inputStyle={TBL_CELL}
+                            inputClassName=""
+                          />
+                        </td>
+                        <td style={{ padding: 0, border: "1px solid #aaa" }}>
+                          <input
+                            ref={(el) => (packRefs.current[i] = el)}
+                            type="number"
+                            value={r.quantity}
+                            onChange={(e) =>
+                              updateRow(i, { quantity: e.target.value })
+                            }
+                            onKeyDown={(e) => navigateCell(e, i, 1)}
+                            style={TBL_CELL}
+                          />
+                        </td>
+                        <td style={{ padding: 0, border: "1px solid #aaa" }}>
+                          <input
+                            readOnly
+                            value={totalPieces || ""}
+                            style={{ ...TBL_CELL, background: "transparent" }}
+                          />
+                        </td>
+                        <td
+                          style={{
+                            padding: 0,
+                            border: missingSale
+                              ? "2px solid #dc2626"
+                              : "1px solid #aaa",
+                            background: missingSale ? "#fff5f5" : undefined,
+                          }}
+                        >
+                          <input
+                            ref={(el) => (salePriceRefs.current[i] = el)}
+                            type="number"
+                            value={r.sellingPrice}
+                            onChange={(e) =>
+                              updateRow(i, { sellingPrice: e.target.value })
+                            }
+                            onKeyDown={(e) => navigateCell(e, i, 2)}
+                            style={TBL_CELL}
+                          />
+                        </td>
+                        <td style={{ padding: 0, border: "1px solid #aaa" }}>
+                          <input
+                            ref={(el) => (disc1Refs.current[i] = el)}
+                            type="number"
+                            value={r.discount1}
+                            onChange={(e) =>
+                              updateRow(i, { discount1: e.target.value })
+                            }
+                            onKeyDown={(e) => navigateCell(e, i, 3)}
+                            style={TBL_CELL}
+                          />
+                        </td>
+                        <td style={{ padding: 0, border: "1px solid #aaa" }}>
+                          <input
+                            ref={(el) => (disc2Refs.current[i] = el)}
+                            type="number"
+                            value={r.discount2}
+                            onChange={(e) =>
+                              updateRow(i, { discount2: e.target.value })
+                            }
+                            onKeyDown={(e) => navigateCell(e, i, 4)}
+                            style={TBL_CELL}
+                          />
+                        </td>
+                        <td style={{ padding: 0, border: "1px solid #aaa" }}>
+                          <input
+                            ref={(el) => (gstRefs.current[i] = el)}
+                            type="number"
+                            value={r.gst}
+                            onChange={(e) =>
+                              updateRow(i, { gst: e.target.value })
+                            }
+                            onKeyDown={(e) => navigateCell(e, i, 5)}
+                            style={TBL_CELL}
+                          />
+                        </td>
+                        <td
+                          style={{
+                            padding: 0,
+                            border: missingCost
+                              ? "2px solid #dc2626"
+                              : "1px solid #aaa",
+                            background: missingCost ? "#fff5f5" : undefined,
+                          }}
+                        >
+                          <input
+                            ref={(el) => (purPriceRefs.current[i] = el)}
+                            type="number"
+                            value={autoPrice}
+                            onChange={(e) =>
+                              updateRow(i, { purchaseRate: e.target.value })
+                            }
+                            onKeyDown={(e) => navigateCell(e, i, 6)}
+                            style={TBL_CELL}
+                          />
+                        </td>
+                        <td
+                          style={{
+                            padding: 0,
+                            border: missingBatch
+                              ? "2px solid #dc2626"
+                              : "1px solid #aaa",
+                            background: missingBatch ? "#fff5f5" : undefined,
+                          }}
+                        >
+                          <input
+                            ref={(el) => (batchRefs.current[i] = el)}
+                            value={r.batch}
+                            onChange={(e) =>
+                              updateRow(i, { batch: e.target.value })
+                            }
+                            onKeyDown={(e) => navigateCell(e, i, 7)}
+                            style={TBL_CELL}
+                          />
+                        </td>
+                        <td style={{ padding: 0, border: "1px solid #aaa" }}>
+                          <input
+                            ref={(el) => (bonusRefs.current[i] = el)}
+                            type="number"
+                            value={r.bonusQty}
+                            onChange={(e) =>
+                              updateRow(i, { bonusQty: e.target.value })
+                            }
+                            onKeyDown={(e) => navigateCell(e, i, 8)}
+                            style={TBL_CELL}
+                          />
+                        </td>
+                        <td
+                          style={{
+                            padding: 0,
+                            border: missingExpiry
+                              ? "2px solid #dc2626"
+                              : "1px solid #aaa",
+                            background: missingExpiry ? "#fff5f5" : undefined,
+                          }}
+                        >
+                          <input
+                            ref={(el) => (expiryRefs.current[i] = el)}
+                            type="date"
+                            value={r.expiry}
+                            onChange={(e) =>
+                              updateRow(i, { expiry: e.target.value })
+                            }
+                            onKeyDown={(e) => {
+                              // For date inputs, only intercept Enter/Left/Right for navigation
+                              // to avoid fighting browser's date picker on Up/Down
+                              if (e.key === "Enter" || e.key === "ArrowRight") {
+                                e.preventDefault();
+                                // End of row → go directly to next row's product name
+                                const nextRow = i + 1;
+                                if (nextRow < medicines.length) {
+                                  COLS[0].current[nextRow]?.focus();
+                                } else {
+                                  setMedicines((p) => [...p, emptyRow()]);
+                                  setTimeout(
+                                    () => COLS[0].current[i + 1]?.focus(),
+                                    50,
+                                  );
+                                }
+                              } else if (e.key === "ArrowLeft") {
+                                e.preventDefault();
+                                COLS[8].current[i]?.focus();
+                              } else if (e.key === "ArrowDown") {
+                                e.preventDefault();
+                                if (i + 1 < medicines.length)
+                                  COLS[9].current[i + 1]?.focus();
+                              } else if (e.key === "ArrowUp") {
+                                e.preventDefault();
+                                if (i > 0) COLS[9].current[i - 1]?.focus();
+                              }
+                            }}
+                            style={{
+                              ...TBL_CELL,
+                              fontSize: "clamp(12px,1vw,14px)",
+                            }}
+                          />
+                        </td>
+                        <td
+                          style={{
+                            padding: "0 5px",
+                            border: "1px solid #aaa",
+                            textAlign: "right",
+                            fontSize: "clamp(13px,1.1vw,15px)",
+                            fontWeight: 700,
+                          }}
+                        >
+                          {t.finalAmt > 0 ? t.finalAmt.toFixed(2) : ""}
+                        </td>
+                        <td
+                          style={{
+                            padding: 0,
+                            border: "1px solid #aaa",
+                            textAlign: "center",
+                            background: r.isTesting ? "#ea580c" : "transparent",
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={!!r.isTesting}
+                            onChange={(e) =>
+                              updateRow(i, { isTesting: e.target.checked })
+                            }
+                            title={
+                              r.isTesting
+                                ? "Testing item — will be returned"
+                                : "Mark as testing item"
+                            }
+                            style={{
+                              width: 14,
+                              height: 14,
+                              accentColor: "#e05000",
+                              cursor: "pointer",
+                            }}
+                          />
+                          {r.isTesting && (
+                            <span
+                              style={{
+                                display: "block",
+                                fontSize: "clamp(8px,0.65vw,10px)",
+                                fontWeight: 900,
+                                color: "#fff",
+                                lineHeight: 1,
+                                letterSpacing: 0.5,
+                              }}
+                            >
+                              TEST
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {/* X delete buttons column — fixed width outside scroll */}
+            <div
+              className="shrink-0 flex flex-col"
+              style={{
+                width: 26,
+                background: "#e8e8e8",
+                borderLeft: "1px solid #aaa",
               }}
             >
-              <button
-                onClick={() => setMedicines((p) => p.filter((_, j) => j !== i))}
+              <div
                 style={{
-                  width: 18,
-                  height: 18,
-                  background: "#e53e3e",
-                  color: "#fff",
-                  fontSize: 11,
-                  fontWeight: 900,
-                  border: "none",
-                  cursor: "pointer",
+                  height: "clamp(30px,2.8vh,36px)",
+                  background: "#1a3a1a",
+                  borderBottom: "2px solid #0d2d0d",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: "#fff",
                 }}
               >
                 ✕
-              </button>
+              </div>
+              {medicines.length === 0 && (
+                <div style={{ height: "clamp(30px,2.8vh,36px)" }} />
+              )}
+              {medicines.map((r, i) => (
+                <div
+                  key={i}
+                  style={{
+                    height: "clamp(30px,2.8vh,36px)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderBottom: "1px solid #ccc",
+                    background: r.isTesting
+                      ? "#ffe4b0"
+                      : i % 2 === 0
+                        ? "#f0f0f0"
+                        : "#e8e8e8",
+                  }}
+                >
+                  <button
+                    onClick={() =>
+                      setMedicines((p) => p.filter((_, j) => j !== i))
+                    }
+                    style={{
+                      width: 18,
+                      height: 18,
+                      background: "#e53e3e",
+                      color: "#fff",
+                      fontSize: 11,
+                      fontWeight: 900,
+                      border: "none",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
             </div>
-          ))}
-          </div>
-          </div>  {/* closes inner table+X flex row */}
-
+          </div>{" "}
+          {/* closes inner table+X flex row */}
           {/* ══════ TOTAL ROW (inside white panel) ══════ */}
-          <div className="shrink-0 flex" style={{ borderTop: "2px solid #444", background: "#e8f0e8" }}>
-            <div style={{ flex:1, overflowX:"hidden" }}>
-            <table className="w-full border-collapse" style={{ tableLayout: "fixed", minWidth: 1150 }}>
-          <colgroup>
-            <col style={{ width: "3.5%" }} />
-            <col style={{ width: "5%" }} />
-            <col style={{ width: "15%" }} />
-            <col style={{ width: "5%" }} />
-            <col style={{ width: "5%" }} />
-            <col style={{ width: "6.5%" }} />
-            <col style={{ width: "4.5%" }} />
-            <col style={{ width: "4.5%" }} />
-            <col style={{ width: "4%" }} />
-            <col style={{ width: "6.5%" }} />
-            <col style={{ width: "6.5%" }} />
-            <col style={{ width: "4.5%" }} />
-            <col style={{ width: "7.5%" }} />
-            <col style={{ width: "7.5%" }} />
-            <col style={{ width: "5.5%" }} />
-          </colgroup>
-          <tbody>
-            <tr>
-              <td colSpan={4} style={{ padding: "3px 6px", fontWeight: 900, fontSize: "clamp(13px,1.1vw,15px)", textAlign: "right", border: "1px solid #90a020" }}>Total</td>
-              <td style={{ padding: "2px 4px", border: "1px solid #90a020", textAlign: "center", fontWeight: 900, fontSize: "clamp(13px,1.1vw,15px)", background: "#80d8f0" }}>
-                {medicines.reduce((s, r) => s + getTotals(r).totalPieces, 0) || ""}
-              </td>
-              <td colSpan={7} style={{ padding:"2px 8px", border:"1px solid #6a9a6a", textAlign:"right", fontWeight:700, fontSize:"clamp(13px,1.1vw,15px)", color:"#444" }}>Gross Amount →</td>
-              <td colSpan={3} style={{ padding:"2px 6px", border:"1px solid #1a5c1a", textAlign:"center", fontWeight:900, fontSize:"clamp(14px,1.2vw,16px)", background:"#1a5c1a", color:"#fff" }}>
-                {medicines.reduce((s, r) => s + getTotals(r).finalAmt, 0).toFixed(2)}
-              </td>
-            </tr>
-          </tbody>
-            </table>
+          <div
+            className="shrink-0 flex"
+            style={{ borderTop: "2px solid #444", background: "#e8f0e8" }}
+          >
+            <div style={{ flex: 1, overflowX: "hidden" }}>
+              <table
+                className="w-full border-collapse"
+                style={{ tableLayout: "fixed", minWidth: 1150 }}
+              >
+                <colgroup>
+                  <col style={{ width: "3.5%" }} />
+                  <col style={{ width: "5%" }} />
+                  <col style={{ width: "15%" }} />
+                  <col style={{ width: "5%" }} />
+                  <col style={{ width: "5%" }} />
+                  <col style={{ width: "6.5%" }} />
+                  <col style={{ width: "4.5%" }} />
+                  <col style={{ width: "4.5%" }} />
+                  <col style={{ width: "4%" }} />
+                  <col style={{ width: "6.5%" }} />
+                  <col style={{ width: "6.5%" }} />
+                  <col style={{ width: "4.5%" }} />
+                  <col style={{ width: "7.5%" }} />
+                  <col style={{ width: "7.5%" }} />
+                  <col style={{ width: "5.5%" }} />
+                </colgroup>
+                <tbody>
+                  <tr>
+                    <td
+                      colSpan={4}
+                      style={{
+                        padding: "3px 6px",
+                        fontWeight: 900,
+                        fontSize: "clamp(13px,1.1vw,15px)",
+                        textAlign: "right",
+                        border: "1px solid #90a020",
+                      }}
+                    >
+                      Total
+                    </td>
+                    <td
+                      style={{
+                        padding: "2px 4px",
+                        border: "1px solid #90a020",
+                        textAlign: "center",
+                        fontWeight: 900,
+                        fontSize: "clamp(13px,1.1vw,15px)",
+                        background: "#80d8f0",
+                      }}
+                    >
+                      {medicines.reduce(
+                        (s, r) => s + getTotals(r).totalPieces,
+                        0,
+                      ) || ""}
+                    </td>
+                    <td
+                      colSpan={7}
+                      style={{
+                        padding: "2px 8px",
+                        border: "1px solid #6a9a6a",
+                        textAlign: "right",
+                        fontWeight: 700,
+                        fontSize: "clamp(13px,1.1vw,15px)",
+                        color: "#444",
+                      }}
+                    >
+                      Gross Amount →
+                    </td>
+                    <td
+                      colSpan={3}
+                      style={{
+                        padding: "2px 6px",
+                        border: "1px solid #1a5c1a",
+                        textAlign: "center",
+                        fontWeight: 900,
+                        fontSize: "clamp(14px,1.2vw,16px)",
+                        background: "#1a5c1a",
+                        color: "#fff",
+                      }}
+                    >
+                      {medicines
+                        .reduce((s, r) => s + getTotals(r).finalAmt, 0)
+                        .toFixed(2)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-            <div style={{ width:26, flexShrink:0, background:"#e8f0e8" }} />
-          </div>  {/* closes total row flex */}
-        </div>  {/* closes white panel */}
-      </div>  {/* closes yellow container */}
-
+            <div style={{ width: 26, flexShrink: 0, background: "#e8f0e8" }} />
+          </div>{" "}
+          {/* closes total row flex */}
+        </div>{" "}
+        {/* closes white panel */}
+      </div>{" "}
+      {/* closes yellow container */}
       {/* ══════ BOTTOM BAR ══════ */}
       <div
         className="shrink-0 flex items-center justify-center gap-3 py-2"
-        style={{ background: "#e8c840", borderTop: "2px solid #b89800", minHeight: "clamp(56px,6vh,72px)" }}
+        style={{
+          background: "#e8c840",
+          borderTop: "2px solid #b89800",
+          minHeight: "clamp(56px,6vh,72px)",
+        }}
       >
         <button
           style={{
@@ -1846,21 +1974,6 @@ export default function Purchase({ onBack }) {
           }}
         >
           Products
-        </button>
-        <button
-          onClick={onBack}
-          style={{
-            background: "linear-gradient(135deg,#c53030,#e53e3e)",
-            border: "2px solid #9b2c2c",
-            fontWeight: 700,
-            fontSize: "clamp(13px,1.2vw,16px)",
-            height: "clamp(32px,2.8vh,40px)",
-            padding: "0 20px",
-            cursor: "pointer",
-            color: "#fff",
-          }}
-        >
-          Exit
         </button>
         <button
           onClick={handleSubmit}
@@ -1892,7 +2005,6 @@ export default function Purchase({ onBack }) {
           Print Report
         </button>
       </div>
-
       {/* ══════ INVOICE LIST MODAL ══════ */}
       {showInvoiceList && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -1901,7 +2013,9 @@ export default function Purchase({ onBack }) {
               className="p-3 border-b flex justify-between items-center"
               style={{ background: "#1a5c1a" }}
             >
-              <span className="font-black text-[15px] text-white">Previous Invoices</span>
+              <span className="font-black text-[15px] text-white">
+                Previous Invoices
+              </span>
               <button
                 onClick={() => setShowInvoiceList(false)}
                 className="text-white font-bold text-xl leading-none"
@@ -1977,7 +2091,6 @@ export default function Purchase({ onBack }) {
           </div>
         </div>
       )}
-
       {/* ══════ CONFIRM MODAL ══════ */}
       {showConfirmation && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -2006,7 +2119,6 @@ export default function Purchase({ onBack }) {
           </div>
         </div>
       )}
-
       {/* ══════ INVOICE VIEWER MODAL ══════ */}
       {showInvoiceViewer && viewingInvoice && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">

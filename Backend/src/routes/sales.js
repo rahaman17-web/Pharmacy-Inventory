@@ -42,8 +42,14 @@ router.post(
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ error: "Validation failed", details: errors.array() });
 
-    const { items = [] } = req.body;
+    const { items: rawItems = [] } = req.body;
     const userId = req.user?.id || null;
+
+    // Hard server-side guard: reject if no valid items
+    const items = rawItems.filter(it => it.product_id && Number(it.qty) >= 1);
+    if (items.length === 0) {
+      return res.status(400).json({ error: "Cannot create sale with no items" });
+    }
     
     try {
       // calculate totals

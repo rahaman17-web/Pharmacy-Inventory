@@ -7,13 +7,16 @@ function toIsoDateString(d) {
 	return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-export default function UserSalesHistory({ onBack }) {
+export default function UserSalesHistory({ user, onBack }) {
 	const navigate = useNavigate();
 	const params = useParams();
 	const initialUserId = params.userId ? Number(params.userId) : NaN;
+	const isAdminOrManager = user?.role === "admin" || user?.role === "manager";
 
 	const [users, setUsers] = useState([]);
-	const [userId, setUserId] = useState(Number.isFinite(initialUserId) ? initialUserId : "");
+	const [userId, setUserId] = useState(
+		Number.isFinite(initialUserId) ? initialUserId : (isAdminOrManager ? "" : (user?.id || ""))
+	);
 	const [from, setFrom] = useState(() => toIsoDateString(new Date()));
 	const [to, setTo] = useState(() => toIsoDateString(new Date()));
 	const [loading, setLoading] = useState(false);
@@ -38,6 +41,14 @@ export default function UserSalesHistory({ onBack }) {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [params.userId]);
 
+	// Auto-load for non-admin users (they only see their own data)
+	useEffect(() => {
+		if (!isAdminOrManager && userId) {
+			load();
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [isAdminOrManager, userId]);
+
 	async function load() {
 		if (!userId) {
 			alert("Select a user");
@@ -57,8 +68,9 @@ export default function UserSalesHistory({ onBack }) {
 	}
 
 	const selectedUser = useMemo(() => {
+		if (!isAdminOrManager) return { username: user?.username || "You" };
 		return users.find((u) => Number(u.user_id) === Number(userId));
-	}, [users, userId]);
+	}, [users, userId, isAdminOrManager, user]);
 
 	const activityRows = useMemo(() => {
 		const sold = (salesItems || []).map((it) => ({
@@ -108,43 +120,35 @@ export default function UserSalesHistory({ onBack }) {
 			<div>
 				{/* Header */}
 				<div className="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
-					<div className="bg-gradient-to-r from-purple-500 to-indigo-600 p-6 sm:p-8 text-white">
-						<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-							<div>
-								<h1 className="text-3xl sm:text-4xl font-black tracking-tight">📜 USER HISTORY</h1>
-								<p className="text-indigo-100 text-sm mt-1">Sales and returns for a specific user</p>
-							</div>
-							<button
-								onClick={onBack}
-								className="px-5 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-semibold transition text-sm sm:text-base"
-							>
-								← Back
-							</button>
-						</div>
+					<div style={{ background: "#1e293b", color: "#fff", padding: "12px 20px", display: "flex", alignItems: "center", gap: 14 }}>
+						<button onClick={onBack} style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 6, padding: "6px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>← Back</button>
+						<span style={{ fontSize: 18, fontWeight: 800 }}>USER SALES HISTORY</span>
 					</div>
 
 					{/* Filter Controls */}
 					<div className="p-6 border-b border-gray-200">
-						<div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-							<div className="md:col-span-2">
-								<label className="block text-sm font-semibold text-gray-700 mb-2">User</label>
-								<select
-									value={userId}
-									onChange={(e) => {
-										const v = e.target.value;
-										setUserId(v ? Number(v) : "");
-										if (v) navigate(`/user-sales/${v}`);
-									}}
-									className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-								>
-									<option value="">Select user…</option>
-									{users.map((u) => (
-										<option key={u.user_id} value={u.user_id}>
-											{u.username} (ID: {u.user_id})
-										</option>
-									))}
-								</select>
-							</div>
+						<div className={`grid grid-cols-1 gap-4 items-end ${isAdminOrManager ? "md:grid-cols-4" : "md:grid-cols-3"}`}>
+							{isAdminOrManager && (
+								<div className="md:col-span-2">
+									<label className="block text-sm font-semibold text-gray-700 mb-2">User</label>
+									<select
+										value={userId}
+										onChange={(e) => {
+											const v = e.target.value;
+											setUserId(v ? Number(v) : "");
+											if (v) navigate(`/user-sales/${v}`);
+										}}
+										className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+									>
+										<option value="">Select user…</option>
+										{users.map((u) => (
+											<option key={u.user_id} value={u.user_id}>
+												{u.username} (ID: {u.user_id})
+											</option>
+										))}
+									</select>
+								</div>
+							)}
 							<div>
 								<label className="block text-sm font-semibold text-gray-700 mb-2">From</label>
 								<input
@@ -214,7 +218,7 @@ export default function UserSalesHistory({ onBack }) {
 										<th className="px-6 py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">Qty</th>
 										<th className="px-6 py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">Unit Price</th>
 										<th className="px-6 py-3 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">Amount</th>
-										<th className="px-6 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider">Ref ID</th>
+										<th className="px-6 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider">Invoice #</th>
 									</tr>
 								</thead>
 								<tbody className="bg-white divide-y divide-gray-200">
@@ -229,7 +233,7 @@ export default function UserSalesHistory({ onBack }) {
 													{new Date(r.created_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}
 											</td>
 											<td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{r.item}</td>
-											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.batch_no || "-"}</td>
+											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{r.batch_no || <span className="text-xs text-gray-400 italic">Opening Stock</span>}</td>
 											<td className={`px-6 py-4 whitespace-nowrap text-right font-semibold ${r.qty < 0 ? "text-red-600" : "text-gray-800"}`}>
 												{r.qty}
 											</td>
@@ -239,7 +243,7 @@ export default function UserSalesHistory({ onBack }) {
 											<td className={`px-6 py-4 whitespace-nowrap text-right font-semibold ${r.amount < 0 ? "text-red-600" : "text-gray-800"}`}>
 												Rs. {r.amount.toFixed(2)}
 											</td>
-											<td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
+											<td className="px-6 py-4 whitespace-nowrap text-center text-sm font-semibold text-gray-700">
 												{r.type === 'Sale' ? `S-${r.ref}` : `R-${r.ref}`}
 											</td>
 										</tr>

@@ -14,7 +14,12 @@ api.interceptors.response.use(
   (resp) => resp,
   (error) => {
     const status = error?.response?.status;
-    if (status === 401) {
+    const url = error?.config?.url || "";
+    // Skip logout for PIN/password verification endpoints — a wrong PIN is also a 401
+    // but it should NOT kick the user out of their session
+    const isVerifyEndpoint =
+      url.includes("/verify-password") || url.includes("/set-pin");
+    if (status === 401 && !isVerifyEndpoint) {
       try {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
@@ -23,12 +28,9 @@ api.interceptors.response.use(
       }
       // Redirect to login page to refresh session
       if (typeof window !== "undefined") {
-        // Show a gentle message then navigate to login
         try {
-          // avoid alert spam when multiple requests fail
           if (!window.__authRedirected) {
             window.__authRedirected = true;
-            // small delay so UI can update
             setTimeout(() => {
               window.location.href = "/login";
             }, 200);

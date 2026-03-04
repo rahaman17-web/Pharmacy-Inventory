@@ -11,6 +11,7 @@ export default function SalesReport({ onBack }) {
 	const [summary, setSummary] = useState(null);
 	const [loading, setLoading] = useState(false);
 	const [groupBy, setGroupBy] = useState("day"); // day | month
+	const [showMissingCost, setShowMissingCost] = useState(false);
 	const [from, setFrom] = useState(() => {
 		const now = new Date();
 		const d = new Date(now);
@@ -57,6 +58,7 @@ export default function SalesReport({ onBack }) {
 				net_cash: totals.totalNet,
 				net_profit: 0,
 				missing_cost_lines: 0,
+				missing_cost_items: [],
 			};
 		}
 		return {
@@ -69,6 +71,7 @@ export default function SalesReport({ onBack }) {
 			net_cash: Number(summary.net_cash || 0),
 			net_profit: Number(summary.net_profit || 0),
 			missing_cost_lines: Number(summary.missing_cost_lines || 0),
+			missing_cost_items: summary.missing_cost_items || [],
 		};
 	}, [summary, totals]);
 
@@ -94,16 +97,9 @@ export default function SalesReport({ onBack }) {
 			<div>
 				<div className="bg-white rounded-lg shadow-lg overflow-hidden">
 					{/* Header */}
-					<div className="bg-gradient-to-r from-emerald-500 to-teal-500 p-6 sm:p-8 text-white">
-						<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-							<div>
-								<h1 className="text-3xl sm:text-4xl font-black tracking-tight">📊 SALES REPORT</h1>
-								<p className="text-teal-100 text-sm mt-1">Business summary — daily / monthly analysis</p>
-							</div>
-							<button onClick={onBack} className="px-5 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-semibold transition text-sm sm:text-base">
-								← Back
-							</button>
-						</div>
+					<div style={{ background: "#1e293b", color: "#fff", padding: "12px 20px", display: "flex", alignItems: "center", gap: 14 }}>
+						<button onClick={onBack} style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 6, padding: "6px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>← Back</button>
+						<span style={{ fontSize: 18, fontWeight: 800 }}>SALES REPORT</span>
 					</div>
 
 					{/* Filters */}
@@ -153,7 +149,53 @@ export default function SalesReport({ onBack }) {
 									<SummaryCard label="Net Profit" value={`Rs. ${summaryView.net_profit.toFixed(2)}`} highlight />
 								</div>
 								{summaryView.missing_cost_lines > 0 && (
-									<p className="text-xs text-orange-600 mt-3">⚠️ {summaryView.missing_cost_lines} line(s) missing cost data — profit may be understated.</p>
+									<button
+										onClick={() => setShowMissingCost(true)}
+										className="text-xs text-orange-600 mt-3 underline hover:text-orange-800 cursor-pointer bg-transparent border-0 p-0 text-left"
+									>
+										⚠️ {summaryView.missing_cost_lines} line(s) missing cost data — profit may be understated. Click to view.
+									</button>
+								)}
+
+								{/* Missing-cost items modal */}
+								{showMissingCost && (
+									<div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}
+										onClick={() => setShowMissingCost(false)}>
+										<div style={{ background: "#fff", borderRadius: 10, width: "90%", maxWidth: 600, maxHeight: "80vh", overflow: "auto", padding: 24 }}
+											onClick={e => e.stopPropagation()}>
+											<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+												<h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#c2410c" }}>⚠️ Items Missing Cost Data</h3>
+												<button onClick={() => setShowMissingCost(false)}
+													style={{ background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: 6, padding: "4px 12px", cursor: "pointer", fontWeight: 600, fontSize: 13 }}>✕</button>
+											</div>
+											{summaryView.missing_cost_items.length === 0 ? (
+												<p className="text-gray-500 text-sm">No detail available.</p>
+											) : (
+												<table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+													<thead>
+														<tr style={{ background: "#fff7ed", borderBottom: "2px solid #fed7aa" }}>
+															<th style={{ padding: "8px 10px", textAlign: "left" }}>Sale #</th>
+															<th style={{ padding: "8px 10px", textAlign: "left" }}>Product</th>
+															<th style={{ padding: "8px 10px", textAlign: "right" }}>Qty</th>
+															<th style={{ padding: "8px 10px", textAlign: "right" }}>Price</th>
+															<th style={{ padding: "8px 10px", textAlign: "left" }}>Date</th>
+														</tr>
+													</thead>
+													<tbody>
+														{summaryView.missing_cost_items.map((item, i) => (
+															<tr key={item.sale_item_id || i} style={{ borderBottom: "1px solid #f3f4f6" }}>
+																<td style={{ padding: "6px 10px" }}>{item.sale_id}</td>
+																<td style={{ padding: "6px 10px", fontWeight: 500 }}>{item.product_name}</td>
+																<td style={{ padding: "6px 10px", textAlign: "right" }}>{item.qty}</td>
+																<td style={{ padding: "6px 10px", textAlign: "right" }}>Rs. {Number(item.unit_price || 0).toFixed(2)}</td>
+																<td style={{ padding: "6px 10px" }}>{new Date(item.created_at).toLocaleDateString()}</td>
+															</tr>
+														))}
+													</tbody>
+												</table>
+											)}
+										</div>
+									</div>
 								)}
 							</div>
 

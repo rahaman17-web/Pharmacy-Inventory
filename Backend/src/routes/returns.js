@@ -235,6 +235,7 @@ router.get("/search-products", requireAuth, async (req, res, next) => {
   if (!q) return res.json([]);
   try {
     const { rows } = await db.query(`
+      -- Products with batch stock
       SELECT p.id, p.name, p.formula, p.category,
              b.id AS batch_id, b.batch_no, b.expiry, b.qty AS stock_qty,
              b.cost, p.selling_price
@@ -242,7 +243,20 @@ router.get("/search-products", requireAuth, async (req, res, next) => {
       JOIN batches b ON b.product_id = p.id
       WHERE b.qty > 0
         AND (p.name ILIKE $1 OR p.formula ILIKE $1)
-      ORDER BY p.name, b.expiry NULLS LAST
+      UNION
+      -- Products with opening_qty but no batches
+      SELECT p.id, p.name, p.formula, p.category,
+             NULL AS batch_id,
+             COALESCE(p.batch_no, 'Opening Stock') AS batch_no,
+             p.expiry_date AS expiry,
+             p.opening_qty AS stock_qty,
+             p.purchase_price AS cost,
+             p.selling_price
+      FROM products p
+      WHERE p.opening_qty > 0
+        AND (p.name ILIKE $1 OR p.formula ILIKE $1)
+        AND NOT EXISTS (SELECT 1 FROM batches b WHERE b.product_id = p.id AND b.qty > 0)
+      ORDER BY name, expiry NULLS LAST
       LIMIT 40
     `, [`%${q}%`]);
     res.json(rows);
