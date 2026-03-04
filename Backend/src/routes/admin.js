@@ -1,7 +1,6 @@
 import express from "express";
 import db from "../db.js";
 import bcrypt from "bcrypt";
-import { body, validationResult } from "express-validator";
 import { requireAuth } from "../middleware/auth.js";
 import { requireRole } from "../middleware/roles.js";
 
@@ -48,7 +47,7 @@ router.get(
   requireRole(["admin"]),
   async (req, res) => {
     try {
-      const { rows } = await db.query("SELECT id, username, role, cnic, cnic_name, emp_id, created_at FROM users ORDER BY id DESC");
+      const { rows } = await db.query("SELECT id, username, role, cnic, cnic_name, emp_id, address, contact_no, father_contact_no, created_at FROM users ORDER BY id DESC");
       res.json(rows);
     } catch (err) {
       console.error("List users failed", err);
@@ -57,7 +56,7 @@ router.get(
   }
 );
 
-// Verify admin password (re-prompt) - admin must be logged in
+// Verify panel PIN — if a panel_pin is set use it, otherwise fall back to login password
 router.post(
   "/verify-password",
   requireAuth,
@@ -66,15 +65,44 @@ router.post(
     const { password } = req.body || {};
     if (!password) return res.status(400).json({ error: "Password required" });
     try {
+      const { rows } = await db.query("SELECT password, panel_pin FROM users WHERE id = $1 LIMIT 1", [req.user.id]);
+      const user = rows[0];
+      if (!user) return res.status(404).json({ error: "User not found" });
+      // If a panel PIN has been set, verify against it; otherwise fall back to login password
+      const hashToCheck = user.panel_pin || user.password;
+      const ok = await bcrypt.compare(password, hashToCheck);
+      if (!ok) return res.status(401).json({ error: "Incorrect PIN" });
+      res.json({ ok: true, usingPin: !!user.panel_pin });
+    } catch (err) {
+      console.error('Verify password failed', err);
+      res.status(500).json({ error: 'Failed to verify' });
+    }
+  }
+);
+
+// Set / change the panel PIN
+router.post(
+  "/set-pin",
+  requireAuth,
+  requireRole(["admin"]),
+  async (req, res) => {
+    const { current_password, new_pin } = req.body || {};
+    if (!current_password) return res.status(400).json({ error: "Current login password required" });
+    if (!new_pin || new_pin.toString().trim().length < 4)
+      return res.status(400).json({ error: "PIN must be at least 4 characters" });
+    try {
+      // Always verify current LOGIN password before allowing PIN change
       const { rows } = await db.query("SELECT password FROM users WHERE id = $1 LIMIT 1", [req.user.id]);
       const user = rows[0];
       if (!user) return res.status(404).json({ error: "User not found" });
-      const ok = await bcrypt.compare(password, user.password);
-      if (!ok) return res.status(401).json({ error: "Invalid password" });
+      const ok = await bcrypt.compare(current_password, user.password);
+      if (!ok) return res.status(401).json({ error: "Incorrect login password" });
+      const hash = await bcrypt.hash(new_pin.toString(), 10);
+      await db.query("UPDATE users SET panel_pin = $1 WHERE id = $2", [hash, req.user.id]);
       res.json({ ok: true });
     } catch (err) {
-      console.error('Verify password failed', err);
-      res.status(500).json({ error: 'Failed to verify password' });
+      console.error('Set PIN failed', err);
+      res.status(500).json({ error: 'Failed to set PIN' });
     }
   }
 );
@@ -84,11 +112,15 @@ router.post(
   "/users",
   requireAuth,
   requireRole(["admin"]),
-  [body("username").notEmpty(), body("cnic").notEmpty(), body("cnic_name").notEmpty(), body("emp_id").notEmpty(), body("role").optional()],
   async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
-    const { username, cnic, cnic_name, role } = req.body;
+    const { name, cnic, role, address, contact_no, father_contact_no, password } = req.body;
+    const emp_id = req.body.emp_id;
+    if (!name || !name.trim()) return res.status(400).json({ error: "Name is required" });
+    if (!cnic || !cnic.trim()) return res.status(400).json({ error: "CNIC is required" });
+    if (!emp_id || !emp_id.toString().trim()) return res.status(400).json({ error: "User ID is required" });
+    if (!password || !password.trim()) return res.status(400).json({ error: "Password is required" });
+    // username = name (used as login identifier)
+    const username = name.trim();
     try {
       // normalize cnic digits and extract last 3 digits
       const digits = (cnic || "").toString().replace(/\D/g, "");
@@ -97,23 +129,23 @@ router.post(
 
       // ensure username, cnic, emp_id and last3 are unique
       const { rows: sameUser } = await db.query("SELECT id FROM users WHERE username = $1", [username]);
-      if (sameUser && sameUser.length > 0) return res.status(400).json({ error: "Username already exists" });
+      if (sameUser && sameUser.length > 0) return res.status(400).json({ error: "Name already exists" });
 
       const { rows: sameCnic } = await db.query("SELECT id FROM users WHERE cnic = $1", [cnic]);
       if (sameCnic && sameCnic.length > 0) return res.status(400).json({ error: "CNIC already registered" });
 
-      const { rows: sameEmp } = await db.query("SELECT id FROM users WHERE emp_id = $1", [req.body.emp_id]);
-      if (sameEmp && sameEmp.length > 0) return res.status(400).json({ error: "Employee ID already registered" });
+      const { rows: sameEmp } = await db.query("SELECT id FROM users WHERE emp_id = $1", [emp_id]);
+      if (sameEmp && sameEmp.length > 0) return res.status(400).json({ error: "User ID already registered" });
 
       const { rows: sameLast } = await db.query("SELECT id FROM users WHERE cnic_last3 = $1", [last3]);
       if (sameLast && sameLast.length > 0) return res.status(400).json({ error: "Another user already has the same CNIC last 3 digits" });
 
-      const hash = await bcrypt.hash(last3, 10);
+      const hash = await bcrypt.hash(password, 10);
       await db.query(
-        "INSERT INTO users (username, password, role, cnic, cnic_name, cnic_last3, emp_id) VALUES ($1,$2,$3,$4,$5,$6,$7)",
-        [username, hash, role, cnic, cnic_name, last3, req.body.emp_id]
+        "INSERT INTO users (username, password, role, cnic, cnic_name, cnic_last3, emp_id, address, contact_no, father_contact_no) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
+        [username, hash, role || "user", cnic, username, last3, emp_id, address || null, contact_no || null, father_contact_no || null]
       );
-      res.json({ ok: true, username, role, default_password_hint: "last 3 digits of CNIC" });
+      res.json({ ok: true, username, role });
     } catch (err) {
       console.error("Create user failed", err);
       res.status(500).json({ error: "Failed to create user" });
@@ -128,7 +160,7 @@ router.patch(
   requireRole(["admin"]),
   async (req, res) => {
     const id = req.params.id;
-    const { password, role, cnic, cnic_name, emp_id } = req.body;
+    const { password, role, cnic, cnic_name, emp_id, name, address, contact_no, father_contact_no } = req.body;
     try {
       const updates = [];
       const params = [];
@@ -141,6 +173,14 @@ router.patch(
         params.push(role);
         updates.push(`role = $${params.length}`);
       }
+      // name updates both username and cnic_name
+      const effectiveName = name || cnic_name;
+      if (effectiveName) {
+        params.push(effectiveName.trim());
+        updates.push(`username = $${params.length}`);
+        params.push(effectiveName.trim());
+        updates.push(`cnic_name = $${params.length}`);
+      }
       if (cnic) {
         const digits = (cnic || "").toString().replace(/\D/g, "");
         if (digits.length < 3) return res.status(400).json({ error: "CNIC must contain at least 3 digits" });
@@ -152,19 +192,24 @@ router.patch(
         if (sameLast && sameLast.length > 0) return res.status(400).json({ error: "Another user already has the same CNIC last 3 digits" });
         params.push(cnic);
         updates.push(`cnic = $${params.length}`);
-        params.push(cnic_name || null);
-        updates.push(`cnic_name = $${params.length}`);
         params.push(last3);
         updates.push(`cnic_last3 = $${params.length}`);
-        // emp_id uniqueness
+      }
+      if (emp_id !== undefined) {
         params.push(emp_id || null);
         updates.push(`emp_id = $${params.length}`);
-      } else if (cnic_name) {
-        params.push(cnic_name);
-        updates.push(`cnic_name = $${params.length}`);
-      } else if (emp_id) {
-        params.push(emp_id);
-        updates.push(`emp_id = $${params.length}`);
+      }
+      if (address !== undefined) {
+        params.push(address || null);
+        updates.push(`address = $${params.length}`);
+      }
+      if (contact_no !== undefined) {
+        params.push(contact_no || null);
+        updates.push(`contact_no = $${params.length}`);
+      }
+      if (father_contact_no !== undefined) {
+        params.push(father_contact_no || null);
+        updates.push(`father_contact_no = $${params.length}`);
       }
       if (updates.length === 0) return res.status(400).json({ error: "Nothing to update" });
       params.push(id);
@@ -185,7 +230,17 @@ router.delete(
   requireRole(["admin"]),
   async (req, res) => {
     const id = req.params.id;
+    // Prevent self-deletion
+    if (String(id) === String(req.user.id)) {
+      return res.status(400).json({ error: "You cannot delete your own account" });
+    }
     try {
+      // Block deleting any admin-role user
+      const { rows } = await db.query("SELECT role FROM users WHERE id = $1 LIMIT 1", [id]);
+      if (!rows[0]) return res.status(404).json({ error: "User not found" });
+      if (rows[0].role === "admin") {
+        return res.status(400).json({ error: "Admin accounts cannot be deleted" });
+      }
       await db.query("DELETE FROM users WHERE id = $1", [id]);
       res.json({ ok: true });
     } catch (err) {

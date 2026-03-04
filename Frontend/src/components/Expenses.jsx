@@ -64,23 +64,9 @@ export default function Expenses({ onBack }) {
       <div>
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r from-orange-500 to-amber-500 p-6 sm:p-8 text-white">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
-                  💸 EXPENSES
-                </h1>
-                <p className="text-orange-100 text-sm mt-1">
-                  Track operational costs for accurate net profit
-                </p>
-              </div>
-              <button
-                onClick={onBack}
-                className="px-5 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-semibold transition text-sm sm:text-base"
-              >
-                ← Back
-              </button>
-            </div>
+          <div style={{ background: "#1e293b", color: "#fff", padding: "12px 20px", display: "flex", alignItems: "center", gap: 14 }}>
+            <button onClick={onBack} style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 6, padding: "6px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>← Back</button>
+            <span style={{ fontSize: 18, fontWeight: 800 }}>EXPENSES</span>
           </div>
 
           {/* Add Expense Section */}

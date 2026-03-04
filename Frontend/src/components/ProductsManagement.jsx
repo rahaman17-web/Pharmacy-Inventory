@@ -426,6 +426,10 @@ export default function ProductsManagement({ onBack, user }) {
     0,
   );
 
+  const lowStockCount = filtered.filter(
+    (p) => Number(p.min_level) > 0 && Number(p.opening_qty ?? 0) <= Number(p.min_level)
+  ).length;
+
   const openAdd = () => {
     setForm(emptyForm);
     setEditProduct(null);
@@ -656,13 +660,13 @@ export default function ProductsManagement({ onBack, user }) {
 
       {/* ══════ HEADER BAR ══════ */}
       <div
-        style={{ background: "#d4aa40", borderBottom: "2px solid #b8921c" }}
+        style={{ background: "#1e293b", borderBottom: "none" }}
         className="shrink-0 px-2 py-1"
       >
         <div className="flex items-center gap-1.5 flex-wrap">
-          {/* Title + Add New */}
-          <span className="text-[clamp(15px,1.6vw,22px)] font-black text-gray-900 tracking-tight leading-none mr-1 whitespace-nowrap">
-            Products
+          <button onClick={onBack} style={{ background:"rgba(255,255,255,0.15)", border:"1px solid rgba(255,255,255,0.3)", color:"#fff", borderRadius:6, padding:"5px 14px", fontWeight:700, fontSize:13, cursor:"pointer", marginRight:6 }}>← Back</button>
+          <span style={{ fontSize:"clamp(15px,1.6vw,22px)", fontWeight:900, color:"#fff", letterSpacing:"0.5px", marginRight:6, whiteSpace:"nowrap" }}>
+            PRODUCTS
           </span>
           {isAdminOrManager && (
             <button
@@ -1184,6 +1188,7 @@ export default function ProductsManagement({ onBack, user }) {
                   ) : (
                     filtered.map((p, i) => {
                       const sel = editProduct?.id === p.id;
+                      const isLow = Number(p.min_level) > 0 && Number(p.opening_qty ?? 0) <= Number(p.min_level);
                       return (
                         <tr
                           key={p.id}
@@ -1191,9 +1196,11 @@ export default function ProductsManagement({ onBack, user }) {
                           style={{
                             background: sel
                               ? "#cce0ff"
-                              : i % 2 === 0
-                                ? "#fff"
-                                : "#f7f3e8",
+                              : isLow
+                                ? (i % 2 === 0 ? "#fff0f0" : "#ffe4e4")
+                                : i % 2 === 0
+                                  ? "#fff"
+                                  : "#f7f3e8",
                             cursor: "pointer",
                             height: 26,
                           }}
@@ -1208,10 +1215,16 @@ export default function ProductsManagement({ onBack, user }) {
                             {Number(p.purchase_price || 0).toFixed(2)}
                           </td>
                           <td className="px-1 py-0.5 text-center border border-gray-300 font-bold">
-                            {Number(p.selling_price || 0).toFixed(0)}
+                            {Number(p.selling_price || 0).toFixed(2)}
                           </td>
                           <td className="px-1 py-0.5 text-center border border-gray-300">
-                            {p.opening_qty ?? 0}
+                            {isLow ? (
+                              <span style={{ color: "#dc2626", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 2 }}>
+                                ⚠ {p.opening_qty ?? 0}
+                              </span>
+                            ) : (
+                              p.opening_qty ?? 0
+                            )}
                           </td>
                           <td className="px-1 py-0.5 text-center border border-gray-300">
                             {p.min_level ?? 0}
@@ -1287,6 +1300,11 @@ export default function ProductsManagement({ onBack, user }) {
                 {stockInHand}
               </span>
             </span>
+            {lowStockCount > 0 && (
+              <span className="ml-3 inline-flex items-center gap-1 px-2 py-0.5 rounded font-bold text-white whitespace-nowrap" style={{ background: "#dc2626", fontSize: 11 }}>
+                ⚠ {lowStockCount} Low Stock
+              </span>
+            )}
             <span className="flex-1 text-center text-[11px] text-amber-900 font-medium hidden xl:block">
               Double Click Product Name to View Product Ledger
             </span>
@@ -1316,13 +1334,6 @@ export default function ProductsManagement({ onBack, user }) {
           style={{ background: "#d0d0d0" }}
         >
           Print BarCode 1x1
-        </button>
-        <button
-          onClick={onBack}
-          className="h-[34px] px-5 text-[13px] font-bold border-2 border-red-500 rounded whitespace-nowrap"
-          style={{ background: "#ffd0d0", color: "#990000" }}
-        >
-          Exit
         </button>
         {isAdminOrManager && (
           <button

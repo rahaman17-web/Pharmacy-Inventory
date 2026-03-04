@@ -3,7 +3,7 @@ import AutoComplete from "./Autocomplete.jsx";
 import Receipt from "./Receipt.jsx";
 
 const SALE_DRAFT_KEY = "sale_invoice_draft";
-const EMPTY_ROW = () => ({ product_id: null, item: "", qty: "", price: 0, pack_price: 0, pack_size: 1, available_stock: 0 });
+const EMPTY_ROW = () => ({ product_id: null, item: "", qty: "", price: 0, pack_price: 0, pack_size: 1, available_stock: 0, batch: "" });
 const makeRows = (n = 10) => Array.from({ length: n }, EMPTY_ROW);
 
 export default function SaleInvoice({ onBack }) {
@@ -23,6 +23,7 @@ export default function SaleInvoice({ onBack }) {
   const [billDiscRs, setBillDiscRs] = useState('');
   const [stockAlert, setStockAlert] = useState(null); // { name, qty, index }
   const stockAlertTimerRef = useRef(null);
+  const [scanPreview, setScanPreview] = useState(null); // { product, stock }
 
   const dismissStockAlert = (rowIndex) => {
     clearTimeout(stockAlertTimerRef.current);
@@ -138,7 +139,7 @@ export default function SaleInvoice({ onBack }) {
       }
       
       updated[index].product_id = prod.id || null;
-      updated[index].item = prod.name || (typeof value === "string" ? value : updated[index].item);
+      updated[index].item = (prod.category ? `${prod.category} ${prod.name}` : prod.name) || (typeof value === "string" ? value : updated[index].item);
       updated[index].available_stock = availableStock;
       // Treat product selling_price as PER-UNIT selling price (works for tablets + surgical items)
       const unitPrice = Number(prod.selling_price ?? prod.mrp ?? 0) || 0;
@@ -146,6 +147,7 @@ export default function SaleInvoice({ onBack }) {
       updated[index].pack_price = unitPrice;
       updated[index].pack_size = packSize;
       updated[index].price = Math.round(unitPrice * 100) / 100;
+      updated[index].batch = prod.batch_no || "";
       addRowIfReady(index, updated);
     } else if (field === "qty") {
       const row = updated[index];
@@ -389,12 +391,18 @@ export default function SaleInvoice({ onBack }) {
           if (!stockMap[batch.product_id]) {
             stockMap[batch.product_id] = 0;
           }
-          stockMap[batch.product_id] += batch.qty;
+            stockMap[batch.product_id] += Number(batch.qty) || 0;
         });
         setStockData(stockMap);
       } catch (err) {
         console.error("Failed to refresh stock data:", err);
       }
+
+      // Auto-focus first product row for next sale
+      setTimeout(() => itemRefs.current[0]?.openDropdown(), 350);
+
+      // Auto-focus first product row so user can start next sale with Enter
+      setTimeout(() => itemRefs.current[0]?.openDropdown(), 350);
       
       // Printing is handled by the Receipt modal when user chose Print.
     } catch (err) {
@@ -445,10 +453,10 @@ export default function SaleInvoice({ onBack }) {
         @keyframes drain{from{width:100%}to{width:0%}}
       `}</style>
 
-      {/* ══════ TITLE BAR ══════ */}
-      <div className="shrink-0 text-center font-black"
-        style={{ background:"#e8c840", color:"#111", fontSize:"clamp(22px,2.6vw,36px)", letterSpacing:4, padding:"4px 0 2px" }}>
-        ZAM ZAM PHARMACY
+      {/* ══════ HEADER BAR ══════ */}
+      <div style={{ background:"#1e293b", color:"#fff", padding:"10px 20px", display:"flex", alignItems:"center", gap:14, flexShrink:0 }}>
+        <button onClick={onBack} style={{ background:"rgba(255,255,255,0.15)", border:"1px solid rgba(255,255,255,0.3)", color:"#fff", borderRadius:6, padding:"6px 16px", fontWeight:700, fontSize:13, cursor:"pointer" }}>← Back</button>
+        <span style={{ fontSize:18, fontWeight:800 }}>SALE INVOICE</span>
       </div>
 
       {/* ══════ HEADER: Customer info (dark green bar) ══════ */}
@@ -497,10 +505,55 @@ export default function SaleInvoice({ onBack }) {
           {/* Row 1: Scan/Search label + input + Inv.No + Rs box */}
           <div style={{ display:"flex", alignItems:"center", gap:6 }}>
             <span style={{ fontWeight:700, fontSize:"clamp(13px,1.15vw,15px)", whiteSpace:"nowrap" }}>Scan / Search Product</span>
-            <input ref={scanRef}
-              onKeyDown={e=>{ if(e.key==="Enter"){ e.preventDefault(); const q=e.target.value.trim(); if(q){ const found=availableMedicines.find(m=>String(m.barcode||"")===q||m.name.toLowerCase().includes(q.toLowerCase())); if(found){ const emptyIdx=items.findIndex(r=>!r.product_id); const idx=emptyIdx>=0?emptyIdx:items.length; const newItems=[...items]; if(idx===newItems.length) newItems.push(EMPTY_ROW()); const stock=stockData[found.id]||0; newItems[idx]={...newItems[idx],product_id:found.id,item:found.name,price:Number(found.selling_price||0),pack_size:Number(found.pack_size)||1,available_stock:stock}; setItems(newItems); e.target.value=""; } else alert("Product not found"); } } }}
-              style={{ flex:1, background:"#fff", border:"1px solid #777", padding:"3px 8px", fontSize:"clamp(13px,1.15vw,15px)", height:"clamp(28px,2.6vh,34px)" }} placeholder=""
-            />
+            <div style={{ flex:1, position:"relative" }}>
+              <input ref={scanRef}
+                onKeyDown={e=>{
+                  if(e.key==="Escape"){ e.preventDefault(); setScanPreview(null); e.target.value=""; return; }
+                  if(e.key==="Enter"){
+                    e.preventDefault();
+                    // Preview already shown → add item on second Enter
+                    if(scanPreview){
+                      const { product: found, stock } = scanPreview;
+                      if(stock <= 0){ setScanPreview(null); e.target.value=""; return; }
+                      const emptyIdx=items.findIndex(r=>!r.product_id);
+                      const idx=emptyIdx>=0?emptyIdx:items.length;
+                      const newItems=[...items];
+                      if(idx===newItems.length) newItems.push(EMPTY_ROW());
+                      const label=found.category?`${found.category} ${found.name}`:found.name;
+                      newItems[idx]={...newItems[idx],product_id:found.id,item:label,price:Number(found.selling_price||0),pack_size:Number(found.pack_size)||1,available_stock:stock,batch:found.batch_no||""};
+                      setItems(newItems);
+                      setScanPreview(null);
+                      e.target.value="";
+                      return;
+                    }
+                    // First Enter → search and show preview only
+                    const q=e.target.value.trim();
+                    if(q){
+                      const found=availableMedicines.find(m=>String(m.barcode||"")===q||m.name.toLowerCase().includes(q.toLowerCase())||(m.category&&(`${m.category} ${m.name}`).toLowerCase().includes(q.toLowerCase())));
+                      if(found){ const stock=stockData[found.id]??Number(found.opening_qty??0); setScanPreview({ product: found, stock }); }
+                      else alert("Product not found");
+                    }
+                  }
+                }}
+                onChange={()=>{ if(scanPreview) setScanPreview(null); }}
+                style={{ width:"100%", background:"#fff", border:"1px solid #777", padding:"3px 8px", fontSize:"clamp(13px,1.15vw,15px)", height:"clamp(28px,2.6vh,34px)" }} placeholder=""
+              />
+              {scanPreview && (
+                <div style={{ position:"absolute", top:"100%", left:0, right:0, zIndex:9999, background:scanPreview.stock>0?"#f0fdf4":"#fff5f5", border:`2px solid ${scanPreview.stock>0?"#16a34a":"#dc2626"}`, borderRadius:6, padding:"8px 12px", boxShadow:"0 4px 16px rgba(0,0,0,.2)", marginTop:2 }}>
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                    <div>
+                      <span style={{ fontWeight:800, fontSize:14, color:"#111" }}>{scanPreview.product.category?`${scanPreview.product.category} ${scanPreview.product.name}`:scanPreview.product.name}</span>
+                      <span style={{ marginLeft:10, fontSize:13, color:"#555" }}>Price: <b style={{color:"#1a6b1a"}}>Rs. {Number(scanPreview.product.selling_price||0).toFixed(2)}</b></span>
+                      <span style={{ marginLeft:10, fontSize:13, fontWeight:700, color:scanPreview.stock>0?"#166534":"#dc2626" }}>{scanPreview.stock>0?`Stock: ${scanPreview.stock}`:"⛔ Out of Stock"}</span>
+                    </div>
+                    <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                      {scanPreview.stock>0 && <span style={{ fontSize:11, color:"#166534", background:"#d1fae5", padding:"2px 7px", borderRadius:4 }}>Press Enter to add</span>}
+                      <button onClick={()=>{ setScanPreview(null); if(scanRef.current) scanRef.current.value=""; }} style={{ border:"none", background:"transparent", cursor:"pointer", fontSize:16, color:"#888" }}>✕</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
             <span style={{ fontWeight:700, fontSize:"clamp(13px,1.15vw,15px)", whiteSpace:"nowrap" }}>Inv. No.</span>
             <input readOnly value={invoiceNo}
               style={{ width:"clamp(70px,6vw,100px)", background:"#e0e0e0", border:"1px solid #777", textAlign:"center", fontWeight:900, fontSize:"clamp(14px,1.25vw,16px)", padding:"2px 4px", height:"clamp(28px,2.6vh,34px)", color:"#111" }}/>
@@ -531,16 +584,17 @@ export default function SaleInvoice({ onBack }) {
             <div style={{ flex:1, minWidth:0, overflowX:"auto", overflowY:"auto" }}>
               <table className="w-full border-collapse" style={{ fontSize:"clamp(13px,1.15vw,15px)", tableLayout:"fixed", minWidth:640 }}>
                 <colgroup>
+                  <col style={{width:"6%"}}/>
+                  <col style={{width:"32%"}}/>
+                  <col style={{width:"14%"}}/>
                   <col style={{width:"8%"}}/>
-                  <col style={{width:"38%"}}/>
-                  <col style={{width:"7%"}}/>
                   <col style={{width:"13%"}}/>
                   <col style={{width:"13%"}}/>
-                  <col style={{width:"21%"}}/>
+                  <col style={{width:"14%"}}/>
                 </colgroup>
                 <thead className="sticky top-0 z-10">
                   <tr style={{ background:"#1a3a1a", borderBottom:"2px solid #111" }}>
-                    {["ProductID","Product Name","Qty","Sale Price","Gross","Net Amount"].map(h=>(
+                    {["ProductID","Product Name","Batch","Qty","Sale Price","Gross","Net Amount"].map(h=>(
                       <th key={h} style={{ padding:"5px 6px", border:"1px solid #333", textAlign:"center", fontWeight:700, fontSize:"clamp(13px,1.15vw,15px)", whiteSpace:"nowrap", color:"#fff" }}>{h}</th>
                     ))}
                   </tr>
@@ -574,6 +628,12 @@ export default function SaleInvoice({ onBack }) {
                             placeholder=""
                             inputStyle={{ ...TBL_CELL, textAlign:"left", padding:"0 6px" }}
                           />
+                        </td>
+                        <td style={{ padding:0, border:"1px solid #555" }}>
+                          <input type="text" value={row.batch}
+                            onChange={e=>updateItem(i,"batch",e.target.value)}
+                            style={{...TBL_CELL, textAlign:"center"}}
+                            placeholder=""/>
                         </td>
                         <td style={{ padding:0, border:"1px solid #555" }}>
                           <input ref={(el)=>(qtyRefs.current[i]=el)} type="number" min={1} value={row.qty}
@@ -631,10 +691,6 @@ export default function SaleInvoice({ onBack }) {
             <button ref={completeSaleRef} onClick={handleSubmit}
               style={{ background:"#e0e0e0", border:"2px solid #888", fontWeight:900, fontSize:"clamp(13px,1.2vw,16px)", padding:"5px 22px", cursor:"pointer", whiteSpace:"nowrap" }}>
               Save/Print
-            </button>
-            <button ref={backRef} onClick={onBack}
-              style={{ background:"#e0e0e0", border:"2px solid #888", fontWeight:700, fontSize:"clamp(13px,1.2vw,16px)", padding:"5px 22px", cursor:"pointer" }}>
-              Exit
             </button>
           </div>
           <span style={{ fontWeight:900, fontSize:"clamp(16px,1.6vw,22px)" }}>F4</span>

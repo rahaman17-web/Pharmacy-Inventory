@@ -11,12 +11,24 @@ export default function AdminUsers({ onBack }) {
   const [msgType, setMsgType] = useState("ok");
 
   const [userForm, setUserForm] = useState({
-    username: "",
-    cnic: "",
-    cnic_name: "",
     emp_id: "",
+    name: "",
+    cnic: "",
+    address: "",
+    contact_no: "",
+    father_contact_no: "",
+    password: "",
     role: "user",
   });
+
+  const [users, setUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [editUserForm, setEditUserForm] = useState({
+    name: "", cnic: "", emp_id: "", address: "", contact_no: "", father_contact_no: "", password: "", role: "user",
+  });
+  const [pinModal, setPinModal] = useState(false);
+  const [pinForm, setPinForm] = useState({ current_password: "", new_pin: "", confirm_pin: "" });
 
   const [supplierForm, setSupplierForm] = useState({
     name: "",
@@ -36,6 +48,79 @@ export default function AdminUsers({ onBack }) {
     setMsgType(type);
   };
 
+  const loadUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const { data } = await api.get("/admin/users");
+      setUsers(data || []);
+    } catch {
+      /* */
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const deleteUser = async (u) => {
+    if (!window.confirm(`Delete user "${u.username}"? This cannot be undone.`)) return;
+    try {
+      await api.delete(`/admin/users/${u.id}`);
+      flash(`"${u.username}" deleted.`);
+      loadUsers();
+    } catch (e) {
+      flash(e.response?.data?.error || "Delete failed", "err");
+    }
+  };
+
+  const startEditUser = (u) => {
+    setEditingUser(u);
+    setEditUserForm({
+      name: u.username || "",
+      cnic: u.cnic || "",
+      emp_id: u.emp_id || "",
+      address: u.address || "",
+      contact_no: u.contact_no || "",
+      father_contact_no: u.father_contact_no || "",
+      password: "",
+      role: u.role || "user",
+    });
+  };
+
+  const cancelEditUser = () => { setEditingUser(null); setMessage(""); };
+
+  const submitSetPin = async () => {
+    if (!pinForm.current_password.trim()) { flash("Current login password is required", "err"); return; }
+    if (pinForm.new_pin.length < 4) { flash("PIN must be at least 4 characters", "err"); return; }
+    if (pinForm.new_pin !== pinForm.confirm_pin) { flash("PINs do not match", "err"); return; }
+    try {
+      await api.post("/admin/set-pin", { current_password: pinForm.current_password, new_pin: pinForm.new_pin });
+      flash("Panel PIN updated! Use it next time you unlock User Management.");
+      setPinModal(false);
+      setPinForm({ current_password: "", new_pin: "", confirm_pin: "" });
+    } catch (e) {
+      flash(e.response?.data?.error || "Failed to set PIN", "err");
+    }
+  };
+
+  const submitEditUser = async () => {
+    try {
+      await api.patch(`/admin/users/${editingUser.id}`, {
+        name: editUserForm.name,
+        cnic: editUserForm.cnic,
+        emp_id: editUserForm.emp_id,
+        address: editUserForm.address,
+        contact_no: editUserForm.contact_no,
+        father_contact_no: editUserForm.father_contact_no,
+        role: editUserForm.role,
+        ...(editUserForm.password.trim() ? { password: editUserForm.password } : {}),
+      });
+      flash(`"${editUserForm.name}" updated.`);
+      setEditingUser(null);
+      loadUsers();
+    } catch (e) {
+      flash(e.response?.data?.error || "Update failed", "err");
+    }
+  };
+
   const loadSuppliers = async () => {
     setLoadingSuppliers(true);
     try {
@@ -48,7 +133,7 @@ export default function AdminUsers({ onBack }) {
     }
   };
   useEffect(() => {
-    if (step === "main") loadSuppliers();
+    if (step === "main") { loadSuppliers(); loadUsers(); }
   }, [step]);
 
   const totals = useMemo(
@@ -78,18 +163,28 @@ export default function AdminUsers({ onBack }) {
   };
 
   const submitUser = async () => {
+    if (!userForm.emp_id.trim()) { flash("User ID is required", "err"); return; }
+    if (!userForm.name.trim()) { flash("Name is required", "err"); return; }
+    if (!userForm.cnic.trim()) { flash("CNIC is required", "err"); return; }
+    if (!userForm.password.trim()) { flash("Password is required", "err"); return; }
     try {
       const { data } = await api.post("/admin/users", userForm);
       flash("User created: " + (data.username || ""));
+      loadUsers();
       setUserForm({
-        username: "",
-        cnic: "",
-        cnic_name: "",
         emp_id: "",
+        name: "",
+        cnic: "",
+        address: "",
+        contact_no: "",
+        father_contact_no: "",
+        password: "",
         role: "user",
       });
     } catch (e) {
-      flash(e.response?.data?.error || "Create failed", "err");
+      const d = e.response?.data;
+      const msg = d?.error || (Array.isArray(d?.errors) ? d.errors.map(x => x.msg).join(", ") : null) || "Create failed";
+      flash(msg, "err");
     }
   };
 
@@ -150,61 +245,22 @@ export default function AdminUsers({ onBack }) {
   /* ══ VERIFY SCREEN ══ */
   if (step === "verify") {
     return (
-      <div className="fixed inset-0 bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-4 z-50">
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage:
-              "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
-          }}
-        />
-        <div className="relative w-full max-w-sm">
-          <div className="text-center mb-8">
-            <div className="mx-auto w-16 h-16 bg-gradient-to-br from-red-500 to-rose-600 rounded-2xl flex items-center justify-center shadow-lg shadow-red-500/20 mb-4">
-              <svg
-                className="w-8 h-8 text-white"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.5}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
-                />
-              </svg>
-            </div>
-            <h1 className="text-2xl font-bold text-white">Admin Access</h1>
-            <p className="text-slate-400 text-sm mt-1">
-              Enter password to continue
-            </p>
-          </div>
-          <div className="bg-white/[0.06] backdrop-blur border border-white/10 rounded-2xl p-6 space-y-4">
-            <input
-              type="password"
-              value={adminPass}
-              onChange={(e) => setAdminPass(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && verify()}
-              autoFocus
-              placeholder="Password"
-              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/40 focus:border-transparent transition"
-            />
-            {message && (
-              <p className="text-red-400 text-sm text-center">{message}</p>
-            )}
-            <button
-              onClick={verify}
-              disabled={checking}
-              className="w-full py-3 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-xl font-semibold text-sm hover:from-red-600 hover:to-rose-700 disabled:opacity-50 transition shadow-lg shadow-red-500/20 active:scale-[0.98]"
-            >
+      <div style={{ minHeight: "100vh", background: "#f1f5f9", fontFamily: "'Segoe UI',Tahoma,sans-serif" }}>
+        <div style={{ background: "#1e293b", color: "#fff", padding: "12px 20px", display: "flex", alignItems: "center", gap: 14 }}>
+          <button onClick={onBack} style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 6, padding: "6px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>← Back</button>
+          <span style={{ fontSize: 18, fontWeight: 800 }}>USER MANAGEMENT</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 40 }}>
+          <div style={{ width: 360, background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: 32, textAlign: "center" }}>
+            <div style={{ width: 56, height: 56, borderRadius: 12, background: "#fee2e2", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontSize: 24 }}>🔒</div>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", marginBottom: 4 }}>Admin Access</h2>
+            <p style={{ fontSize: 13, color: "#64748b", marginBottom: 20 }}>Enter your Panel PIN (or login password if no PIN is set)</p>
+            <input type="password" value={adminPass} onChange={e => setAdminPass(e.target.value)} onKeyDown={e => e.key === "Enter" && verify()} autoFocus placeholder="Panel PIN"
+              style={{ width: "100%", padding: "10px 14px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 14, marginBottom: 12, boxSizing: "border-box" }} />
+            {message && <p style={{ color: "#dc2626", fontSize: 13, marginBottom: 12 }}>{message}</p>}
+            <button onClick={verify} disabled={checking}
+              style={{ width: "100%", padding: "10px 0", background: "#1e293b", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: "pointer", opacity: checking ? 0.5 : 1 }}>
               {checking ? "Verifying..." : "Unlock"}
-            </button>
-            <button
-              onClick={onBack}
-              className="w-full py-2 text-slate-400 text-sm hover:text-slate-300 transition"
-            >
-              ← Go Back
             </button>
           </div>
         </div>
@@ -216,48 +272,46 @@ export default function AdminUsers({ onBack }) {
   return (
     <div className="fixed inset-0 bg-slate-100 flex flex-col z-50">
       {/* ── Top Bar ── */}
-      <div className="shrink-0 bg-white border-b border-slate-200 px-4 sm:px-6 h-14 flex items-center gap-3 shadow-sm">
+      <div style={{ background: "#1e293b", color: "#fff", padding: "10px 20px", display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
+        <button onClick={onBack} style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 6, padding: "6px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>← Back</button>
+        <span style={{ fontSize: 18, fontWeight: 800 }}>USER MANAGEMENT</span>
+        <div style={{ flex: 1 }} />
         <button
-          onClick={onBack}
-          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 transition"
-        >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
+          onClick={() => { setPinModal(true); setMessage(""); }}
+          style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 6, padding: "6px 14px", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>
+          Change PIN
         </button>
-        <h1 className="text-lg font-bold text-slate-800">Admin Panel</h1>
-        <div className="flex-1" />
         <button
           onClick={loadSuppliers}
           disabled={loadingSuppliers}
-          className="px-3 py-1.5 text-xs font-medium text-slate-500 bg-slate-100 rounded-lg hover:bg-slate-200 transition disabled:opacity-40 flex items-center gap-1.5"
-        >
-          <svg
-            className={`w-3.5 h-3.5 ${loadingSuppliers ? "animate-spin" : ""}`}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-            />
-          </svg>
+          style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 6, padding: "6px 14px", fontWeight: 600, fontSize: 12, cursor: "pointer", opacity: loadingSuppliers ? 0.5 : 1 }}>
           Refresh
         </button>
       </div>
+
+      {/* ── Change PIN Modal ── */}
+      {pinModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="font-bold text-slate-800">Change Panel PIN</h3>
+              <button onClick={() => { setPinModal(false); setPinForm({ current_password: "", new_pin: "", confirm_pin: "" }); }} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 text-xl">&times;</button>
+            </div>
+            <div className="p-6 space-y-3">
+              <p className="text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2 border border-slate-200">
+                Your <strong>Panel PIN</strong> is used to unlock User Management. It is separate from your login password.
+              </p>
+              <Field label="Current Login Password" type="password" placeholder="Your login password" value={pinForm.current_password} onChange={(e) => setPinForm({ ...pinForm, current_password: e.target.value })} />
+              <Field label="New PIN (min 4 chars)" type="password" placeholder="e.g. 1234" value={pinForm.new_pin} onChange={(e) => setPinForm({ ...pinForm, new_pin: e.target.value })} />
+              <Field label="Confirm New PIN" type="password" placeholder="Repeat PIN" value={pinForm.confirm_pin} onChange={(e) => setPinForm({ ...pinForm, confirm_pin: e.target.value })} />
+            </div>
+            <div className="px-6 pb-5 flex gap-3">
+              <button onClick={() => { setPinModal(false); setPinForm({ current_password: "", new_pin: "", confirm_pin: "" }); }} className="flex-1 py-2.5 border border-slate-300 text-slate-600 rounded-lg font-semibold text-sm hover:bg-slate-50 transition">Cancel</button>
+              <button onClick={submitSetPin} className="flex-1 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-lg font-semibold text-sm hover:from-indigo-700 hover:to-blue-700 transition shadow-sm">Save PIN</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Toast ── */}
       {message && (
@@ -337,7 +391,7 @@ export default function AdminUsers({ onBack }) {
             {openCards.user && (
               <div className="p-5 space-y-3">
                 <Field
-                  label="Employee ID"
+                  label="User ID *"
                   placeholder="EMP-001"
                   value={userForm.emp_id}
                   onChange={(e) =>
@@ -345,27 +399,52 @@ export default function AdminUsers({ onBack }) {
                   }
                 />
                 <Field
-                  label="Username"
-                  placeholder="john.doe"
-                  value={userForm.username}
-                  onChange={(e) =>
-                    setUserForm({ ...userForm, username: e.target.value })
-                  }
-                />
-                <Field
-                  label="Full Name (CNIC)"
+                  label="Name *"
                   placeholder="Muhammad Ahmed"
-                  value={userForm.cnic_name}
+                  value={userForm.name}
                   onChange={(e) =>
-                    setUserForm({ ...userForm, cnic_name: e.target.value })
+                    setUserForm({ ...userForm, name: e.target.value })
                   }
                 />
                 <Field
-                  label="CNIC Number"
+                  label="CNIC *"
                   placeholder="12345-1234567-1"
                   value={userForm.cnic}
                   onChange={(e) =>
                     setUserForm({ ...userForm, cnic: e.target.value })
+                  }
+                />
+                <Field
+                  label="Address"
+                  placeholder="Street, City"
+                  value={userForm.address}
+                  onChange={(e) =>
+                    setUserForm({ ...userForm, address: e.target.value })
+                  }
+                />
+                <Field
+                  label="Contact No."
+                  placeholder="0300-1234567"
+                  value={userForm.contact_no}
+                  onChange={(e) =>
+                    setUserForm({ ...userForm, contact_no: e.target.value })
+                  }
+                />
+                <Field
+                  label="Father Contact No."
+                  placeholder="0300-7654321"
+                  value={userForm.father_contact_no}
+                  onChange={(e) =>
+                    setUserForm({ ...userForm, father_contact_no: e.target.value })
+                  }
+                />
+                <Field
+                  label="Password *"
+                  type="password"
+                  placeholder="Enter password"
+                  value={userForm.password}
+                  onChange={(e) =>
+                    setUserForm({ ...userForm, password: e.target.value })
                   }
                 />
                 <div>
@@ -392,7 +471,129 @@ export default function AdminUsers({ onBack }) {
                 </button>
               </div>
             )}
+
+            {/* ── User List ── */}
+            <div className="border-t border-slate-100">
+              <div className="px-5 py-3 bg-slate-50 flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  {users.length} Staff Member{users.length !== 1 ? "s" : ""}
+                </span>
+                <button
+                  onClick={loadUsers}
+                  disabled={loadingUsers}
+                  className="text-xs text-slate-400 hover:text-slate-600 transition disabled:opacity-40"
+                >
+                  {loadingUsers ? "Loading…" : "↺ Refresh"}
+                </button>
+              </div>
+              {loadingUsers ? (
+                <div className="py-8 text-center">
+                  <div className="inline-block w-4 h-4 border-2 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
+                </div>
+              ) : users.length === 0 ? (
+                <p className="py-8 text-center text-sm text-slate-400">No users yet.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-100 border-b border-slate-200">
+                        <th className="pl-5 pr-2 py-2.5">ID</th>
+                        <th className="px-2 py-2.5">Name</th>
+                        <th className="px-2 py-2.5">Emp ID</th>
+                        <th className="px-2 py-2.5">Role</th>
+                        <th className="px-2 pr-5 py-2.5 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {users.map((u) => (
+                        <tr key={u.id} className="hover:bg-slate-50 transition group">
+                          <td className="pl-5 pr-2 py-2.5 text-slate-400 font-mono text-xs">{u.id}</td>
+                          <td className="px-2 py-2.5">
+                            <span className="font-semibold text-slate-800">{u.username}</span>
+                            {u.cnic && (
+                              <span className="block text-xs text-slate-400">{u.cnic}</span>
+                            )}
+                          </td>
+                          <td className="px-2 py-2.5 text-slate-600 text-xs">{u.emp_id || "—"}</td>
+                          <td className="px-2 py-2.5">
+                            <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                              u.role === "admin" ? "bg-purple-100 text-purple-700" :
+                              u.role === "manager" ? "bg-blue-100 text-blue-700" :
+                              u.role === "cashier" ? "bg-amber-100 text-amber-700" :
+                              "bg-slate-100 text-slate-600"
+                            }`}>{u.role}</span>
+                          </td>
+                          <td className="px-2 pr-5 py-2.5 text-right">
+                            <div className="inline-flex gap-1 opacity-0 group-hover:opacity-100 transition ml-auto">
+                              <button
+                                onClick={() => startEditUser(u)}
+                                title="Edit user"
+                                className="w-7 h-7 flex items-center justify-center rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
+                                </svg>
+                              </button>
+                              {u.role !== "admin" && (
+                              <button
+                                onClick={() => deleteUser(u)}
+                                title="Delete user"
+                                className="w-7 h-7 flex items-center justify-center rounded-md bg-red-50 text-red-500 hover:bg-red-100"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                </svg>
+                              </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* ── Edit User Modal ── */}
+          {editingUser && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+                <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                  <h3 className="font-bold text-slate-800">Edit User — {editingUser.username}</h3>
+                  <button onClick={cancelEditUser} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 text-xl">&times;</button>
+                </div>
+                <div className="p-6 space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="User ID" value={editUserForm.emp_id} onChange={(e) => setEditUserForm({ ...editUserForm, emp_id: e.target.value })} placeholder="EMP-001" />
+                    <Field label="Name" value={editUserForm.name} onChange={(e) => setEditUserForm({ ...editUserForm, name: e.target.value })} placeholder="Muhammad Ahmed" />
+                  </div>
+                  <Field label="CNIC" value={editUserForm.cnic} onChange={(e) => setEditUserForm({ ...editUserForm, cnic: e.target.value })} placeholder="12345-1234567-1" />
+                  <Field label="Address" value={editUserForm.address} onChange={(e) => setEditUserForm({ ...editUserForm, address: e.target.value })} placeholder="Street, City" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Contact No." value={editUserForm.contact_no} onChange={(e) => setEditUserForm({ ...editUserForm, contact_no: e.target.value })} placeholder="0300-1234567" />
+                    <Field label="Father Contact No." value={editUserForm.father_contact_no} onChange={(e) => setEditUserForm({ ...editUserForm, father_contact_no: e.target.value })} placeholder="0300-7654321" />
+                  </div>
+                  <Field label="New Password (leave blank to keep)" type="password" value={editUserForm.password} onChange={(e) => setEditUserForm({ ...editUserForm, password: e.target.value })} placeholder="••••••••" />
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Role</label>
+                    <select value={editUserForm.role} onChange={(e) => setEditUserForm({ ...editUserForm, role: e.target.value })}
+                      className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition">
+                      <option value="user">User</option>
+                      <option value="cashier">Cashier</option>
+                      <option value="manager">Manager</option>
+                      {editingUser.role === "admin" && <option value="admin">Admin</option>}
+                    </select>
+                  </div>
+                </div>
+                <div className="px-6 pb-5 flex gap-3">
+                  <button onClick={cancelEditUser} className="flex-1 py-2.5 border border-slate-300 text-slate-600 rounded-lg font-semibold text-sm hover:bg-slate-50 transition">Cancel</button>
+                  <button onClick={submitEditUser} className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-semibold text-sm hover:from-blue-700 hover:to-indigo-700 transition shadow-sm">Save Changes</button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* ╔══════════════════════════════════════╗
              ║    CARD 2 — SUPPLIER MANAGEMENT      ║

@@ -18,9 +18,35 @@ export async function consumeStock(productId, quantityNeeded) {
     remaining -= take;
   }
 
+  // Fallback: consume from opening_qty (products added without a purchase invoice)
+  if (remaining > 0) {
+    const { rows: prodRows } = await db.query(
+      `SELECT opening_qty, purchase_price FROM products WHERE id=$1`,
+      [productId]
+    );
+    const openingQty = Number(prodRows[0]?.opening_qty || 0);
+    const productCost = Number(prodRows[0]?.purchase_price || 0);
+    if (openingQty >= remaining) {
+      await db.query(
+        `UPDATE products SET opening_qty = opening_qty - $1 WHERE id=$2`,
+        [remaining, productId]
+      );
+      consumed.push({ batch_id: null, qty: remaining, unit_cost: productCost });
+      remaining = 0;
+    } else if (openingQty > 0) {
+      await db.query(
+        `UPDATE products SET opening_qty = 0 WHERE id=$1`,
+        [productId]
+      );
+      consumed.push({ batch_id: null, qty: openingQty, unit_cost: productCost });
+      remaining -= openingQty;
+    }
+  }
+
   if (remaining > 0) {
     throw new Error("Insufficient stock");
   }
 
   return consumed; // array of { batch_id, qty, unit_cost }
 }
+
